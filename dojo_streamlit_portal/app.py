@@ -97,30 +97,29 @@ if submitted:
     except Exception as e:
         st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
 
-        
-def pct(a, b):
-    try:
-        a = float(a); b = float(b)
-        return 0 if b <= 0 else max(0, min(100, (a / b) * 100))
-    except Exception:
-        return 0
-
-def as_float(x, default=0):
-    try:
-        return float(x)
-    except Exception:
-        return default
-
-# ✅ Only one check now, using session_state
+# ---- logged-in view ----
 if st.session_state.member is not None:
     member = st.session_state.member
 
-    # 🔒 Logout button
+    # Logout
     if st.button("Logout"):
         st.session_state.member = None
         st.rerun()
 
     # Pull fields
+    def as_float(x, default=0):
+        try:
+            return float(x)
+        except Exception:
+            return default
+
+    def pct(a, b):
+        try:
+            a = float(a); b = float(b)
+            return 0 if b <= 0 else max(0, min(100, (a / b) * 100))
+        except Exception:
+            return 0
+
     name    = member.get("MemberName","")
     year    = member.get("LeaveYear","")
     allow   = as_float(member.get("AnnualAllowance", 0))
@@ -129,74 +128,64 @@ if st.session_state.member is not None:
     updated = member.get("LastUpdated","")
     email   = member.get("Email","")
 
-    # Tabs
+    # Tabs (give them a stable key)
     tab1, tab2, tab3, tab4 = st.tabs(
-    ["My balance", "Request update", "My requests", "Dojo info"],
-    key="main_tabs"
-)
+        ["My balance", "Request update", "My requests", "Dojo info"],
+        key="main_tabs"
+    )
 
     with tab1:
         st.markdown(f"**{name}**  ·  {email}")
         st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
         st.write("")
 
-        # Card layout with metrics
         c1, c2, c3 = st.columns([1,1,1])
         with c1:
             st.markdown("<div class='card'><div class='title'>Allowance</div>", unsafe_allow_html=True)
-            st.metric(label="", value=f"{int(allow) if allow.is_integer() else allow}")
+            st.metric(label="", value=f"{int(allow) if isinstance(allow, float) and allow.is_integer() else allow}")
             st.markdown("</div>", unsafe_allow_html=True)
         with c2:
             st.markdown("<div class='card'><div class='title'>Taken</div>", unsafe_allow_html=True)
-            st.metric(label="", value=f"{int(taken) if taken.is_integer() else taken}")
+            st.metric(label="", value=f"{int(taken) if isinstance(taken, float) and taken.is_integer() else taken}")
             st.markdown("</div>", unsafe_allow_html=True)
         with c3:
             st.markdown("<div class='card'><div class='title'>Balance</div>", unsafe_allow_html=True)
-            st.metric(label="", value=f"{int(bal) if bal.is_integer() else bal}")
+            st.metric(label="", value=f"{int(bal) if isinstance(bal, float) and bal.is_integer() else bal}")
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.write("")
-        # Progress bar for taken vs allowance
         used_pct = pct(taken, allow)
         st.markdown("**Usage**")
         st.progress(int(used_pct), text=f"{used_pct:.0f}% of allowance used")
-
-        # Optional: little summary
         st.markdown(f"<div class='muted'>You have {bal:.0f} remaining out of {allow:.0f}.</div>", unsafe_allow_html=True)
 
-   with tab2:
-    st.subheader("Request an update")
+    with tab2:
+        st.subheader("Request an update")
 
-    # Stable widget keys so Streamlit remembers state across reruns
-    req_type = st.selectbox(
-        "Request type",
-        ["Leave balance query", "Contact change", "Billing question", "Other"],
-        key="req_type"  # stable key
-    )
+        req_type = st.selectbox(
+            "Request type",
+            ["Leave balance query", "Contact change", "Billing question", "Other"],
+            key="req_type"
+        )
+        msg = st.text_area(
+            "Message",
+            placeholder="What would you like us to update or check?",
+            key="req_msg"
+        )
 
-    msg = st.text_area(
-        "Message",
-        placeholder="What would you like us to update or check?",
-        key="req_msg"  # stable key
-    )
-
-    # Button with stable key
-    send = st.button("Send request", type="primary", key="req_send_btn")
-    if send:
-        try:
-            append_request(member, req_type, (msg or "").strip())
-            st.success("Thanks — we received your request.")
-
-            # Optionally clear inputs after submit
-            st.session_state.req_type = "Leave balance query"
-            st.session_state.req_msg = ""
-        except Exception as e:
-            st.error(f"Could not submit request: {e}")
-
+        send = st.button("Send request", type="primary", key="req_send_btn")
+        if send:
+            try:
+                append_request(member, req_type, (msg or "").strip())
+                st.success("Thanks — we received your request.")
+                # optional: clear inputs
+                st.session_state.req_type = "Leave balance query"
+                st.session_state.req_msg = ""
+            except Exception as e:
+                st.error(f"Could not submit request: {e}")
 
     with tab3:
         st.subheader("My requests")
-        # Load requests and filter to this user
         try:
             gc = get_gsheets_client()
             r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
@@ -204,8 +193,10 @@ if st.session_state.member is not None:
             if not r_df.empty and "MemberEmail" in r_df.columns:
                 mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
                 show_cols = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in mine.columns]
-                st.dataframe(mine[show_cols].sort_values("Timestamp", ascending=False),
-                             use_container_width=True, hide_index=True)
+                st.dataframe(
+                    mine[show_cols].sort_values("Timestamp", ascending=False),
+                    use_container_width=True, hide_index=True
+                )
             else:
                 st.info("No requests yet.")
         except Exception as e:
@@ -218,5 +209,7 @@ if st.session_state.member is not None:
 - **Leave policy:** Members have an annual allowance; please submit requests early where possible.
 - **Contact:** admin@yourdojo.com · 0400 000 000
         """)
+
+# ---- logged-out view ----
 else:
     st.info("Enter your email and PIN to view your balance.")
