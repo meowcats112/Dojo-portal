@@ -93,7 +93,7 @@ if st.session_state.member is None:
             missing = [c for c in required_cols if c not in df.columns]
             if missing:
                 st.error(f"Your Members sheet is missing columns: {', '.join(missing)}")
-            else:
+        else:
             # Find all rows that match this email + PIN
             matches = df[
                 (df["Email"].str.strip().str.lower() == email.strip().lower())
