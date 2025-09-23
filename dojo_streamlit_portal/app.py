@@ -142,8 +142,7 @@ if st.session_state.member is not None:
     )
 
     if nav == "My balance":
-        st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
-        st.write("")  # spacer
+
         # Card layout with metrics
         c1, c2, c3 = st.columns([1,1,1])
         with c1:
@@ -164,6 +163,9 @@ if st.session_state.member is not None:
         st.markdown("**Usage**")
         st.progress(int(used_pct), text=f"{used_pct:.0f}% of allowance used")
         st.markdown(f"<div class='muted'>You have {bal:.0f} remaining out of {allow:.0f}.</div>", unsafe_allow_html=True)
+
+        st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
+        st.write("")  # spacer
 
     elif nav == "Request update":
         st.subheader("Request an update")
