@@ -70,8 +70,14 @@ def append_request(member, req_type, message):
     ])
 
 # --- UI ---
-st.markdown("## 🥋 Dojo Member Portal")
-st.caption("View your leave balance and request simple updates.")
+# Heading + logout row
+col1, col2 = st.columns([6,1])  # wide column for heading, small one for button
+with col1:
+    st.markdown("### 🥋 Dojo Member Portal")
+with col2:
+    if st.button("Logout"):
+        st.session_state.member = None
+        st.rerun()
 
 # --- Login form (only show if not already logged in) ---
 if st.session_state.member is None:
@@ -101,11 +107,6 @@ if st.session_state.member is None:
 # ---- logged-in view ----
 if st.session_state.member is not None:
     member = st.session_state.member
-
-    # Logout
-    if st.button("Logout"):
-        st.session_state.member = None
-        st.rerun()
 
     # Pull fields
     def as_float(x, default=0):
