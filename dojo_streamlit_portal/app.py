@@ -181,4 +181,3 @@ if member is not None:
 - **Leave policy:** Members have an annual allowance; please submit requests early where possible.
 - **Contact:** admin@yourdojo.com · 0400 000 000
         """)
-Improve layout with tabs + progress bar
