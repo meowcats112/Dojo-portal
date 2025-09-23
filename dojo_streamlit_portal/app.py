@@ -116,9 +116,9 @@ if st.session_state.member is not None:
     member = st.session_state.member   # get saved login
 
     # 🔒 Logout button
-    if st.button("Logout"):
-        st.session_state.member = None
-        st.experimental_rerun()
+ if st.button("Logout"):
+    st.session_state.member = None
+    st.rerun()   # modern replacement for experimental_rerun
 
     # Pull fields
     name    = member.get("MemberName","")
