@@ -82,35 +82,22 @@ with st.form("login"):
 if submitted:
     try:
         df = load_members_df()
-        # Basic required columns check
         required_cols = {"MemberID","MemberName","Email","LeaveYear","AnnualAllowance","LeaveTaken","LeaveBalance","LastUpdated"}
         missing = [c for c in required_cols if c not in df.columns]
         if missing:
             st.error(f"Your Members sheet is missing columns: {', '.join(missing)}")
         else:
-            member = find_member(df, email, pin)
-            if member is not None:
-                # ✅ Save login into session state
-                st.session_state.member = member.to_dict() if hasattr(member, "to_dict") else dict(member)
+            m = find_member(df, email, pin)
+            if m is not None:
+                # save to session state (dict)
+                st.session_state.member = m.to_dict() if hasattr(m, "to_dict") else dict(m)
                 st.success("Found your record.")
             else:
                 st.error("No match found. Check your email/PIN or contact the dojo.")
     except Exception as e:
         st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
+
         
-if st.session_state.get("member") is not None:
-    member = st.session_state.member
-    # render tabs / balance here
-
- # 🔒 Logout button
-    if st.button("Logout"):
-        st.session_state.member = None
-        st.experimental_rerun()
-        
-else:
-    st.info("Enter your email and PIN to view your balance.")
-
-
 def pct(a, b):
     try:
         a = float(a); b = float(b)
@@ -124,15 +111,23 @@ def as_float(x, default=0):
     except Exception:
         return default
 
-if member is not None:
+# ✅ Only one check now, using session_state
+if st.session_state.member is not None:
+    member = st.session_state.member   # get saved login
+
+    # 🔒 Logout button
+    if st.button("Logout"):
+        st.session_state.member = None
+        st.experimental_rerun()
+
     # Pull fields
-    name   = member.get("MemberName","")
-    year   = member.get("LeaveYear","")
-    allow  = as_float(member.get("AnnualAllowance", 0))
-    taken  = as_float(member.get("LeaveTaken", 0))
-    bal    = as_float(member.get("LeaveBalance", 0))
-    updated= member.get("LastUpdated","")
-    email  = member.get("Email","")
+    name    = member.get("MemberName","")
+    year    = member.get("LeaveYear","")
+    allow   = as_float(member.get("AnnualAllowance", 0))
+    taken   = as_float(member.get("LeaveTaken", 0))
+    bal     = as_float(member.get("LeaveBalance", 0))
+    updated = member.get("LastUpdated","")
+    email   = member.get("Email","")
 
     # Tabs
     tab1, tab2, tab3, tab4 = st.tabs(["My balance", "Request update", "My requests", "Dojo info"])
@@ -187,7 +182,8 @@ if member is not None:
             if not r_df.empty and "MemberEmail" in r_df.columns:
                 mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
                 show_cols = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in mine.columns]
-                st.dataframe(mine[show_cols].sort_values("Timestamp", ascending=False), use_container_width=True, hide_index=True)
+                st.dataframe(mine[show_cols].sort_values("Timestamp", ascending=False),
+                             use_container_width=True, hide_index=True)
             else:
                 st.info("No requests yet.")
         except Exception as e:
@@ -200,3 +196,5 @@ if member is not None:
 - **Leave policy:** Members have an annual allowance; please submit requests early where possible.
 - **Contact:** admin@yourdojo.com · 0400 000 000
         """)
+else:
+    st.info("Enter your email and PIN to view your balance.")
