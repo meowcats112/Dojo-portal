@@ -164,6 +164,8 @@ if st.session_state.member is not None:
         st.progress(int(used_pct), text=f"{used_pct:.0f}% of allowance used")
         st.markdown(f"<div class='muted'>You have {bal:.0f} remaining out of {allow:.0f}.</div>", unsafe_allow_html=True)
 
+        st.write("")  # spacer
+        st.write("")  # spacer
         st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
         st.write("")  # spacer
 
