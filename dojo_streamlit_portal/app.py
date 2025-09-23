@@ -127,62 +127,91 @@ if st.session_state.member is not None:
     bal     = as_float(member.get("LeaveBalance", 0))
     updated = member.get("LastUpdated","")
     email   = member.get("Email","")
-    
-        # --- Navigation (radio buttons that look like tabs) ---
-        nav = st.radio(
-            "Navigation",
-            ["My balance", "Request update", "My requests", "Dojo info"],
-            horizontal=True,
-            key="main_tabs"  # remembers selection across reruns
+
+    # --- Navigation (radio buttons that look like tabs) ---
+    nav = st.radio(
+        "Navigation",
+        ["My balance", "Request update", "My requests", "Dojo info"],
+        horizontal=True,
+        key="main_tabs"  # remembers selection across reruns
+    )
+
+    if nav == "My balance":
+        st.markdown(f"**{name}**  ·  {email}")
+        st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
+        st.write("")
+
+        # Card layout with metrics
+        c1, c2, c3 = st.columns([1,1,1])
+        with c1:
+            st.markdown("<div class='card'><div class='title'>Allowance</div>", unsafe_allow_html=True)
+            st.metric(label="", value=f"{int(allow) if isinstance(allow, float) and allow.is_integer() else allow}")
+            st.markdown("</div>", unsafe_allow_html=True)
+        with c2:
+            st.markdown("<div class='card'><div class='title'>Taken</div>", unsafe_allow_html=True)
+            st.metric(label="", value=f"{int(taken) if isinstance(taken, float) and taken.is_integer() else taken}")
+            st.markdown("</div>", unsafe_allow_html=True)
+        with c3:
+            st.markdown("<div class='card'><div class='title'>Balance</div>", unsafe_allow_html=True)
+            st.metric(label="", value=f"{int(bal) if isinstance(bal, float) and bal.is_integer() else bal}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.write("")
+        used_pct = pct(taken, allow)
+        st.markdown("**Usage**")
+        st.progress(int(used_pct), text=f"{used_pct:.0f}% of allowance used")
+        st.markdown(f"<div class='muted'>You have {bal:.0f} remaining out of {allow:.0f}.</div>", unsafe_allow_html=True)
+
+    elif nav == "Request update":
+        st.subheader("Request an update")
+
+        req_type = st.selectbox(
+            "Request type",
+            ["Leave balance query", "Contact change", "Billing question", "Other"],
+            key="req_type"
         )
-    
-        if nav == "My balance":
-            st.markdown(f"**{name}**  ·  {email}")
-            st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
-            st.write("")
-        
-            # Card layout with metrics
-            c1, c2, c3 = st.columns([1,1,1])
-            with c1:
-                st.markdown("<div class='card'><div class='title'>Allowance</div>", unsafe_allow_html=True)
-                st.metric(label="", value=f"{int(allow) if isinstance(allow, float) and allow.is_integer() else allow}")
-                st.markdown("</div>", unsafe_allow_html=True)
-            with c2:
-                st.markdown("<div class='card'><div class='title'>Taken</div>", unsafe_allow_html=True)
-                st.metric(label="", value=f"{int(taken) if isinstance(taken, float) and taken.is_integer() else taken}")
-                st.markdown("</div>", unsafe_allow_html=True)
-            with c3:
-                st.markdown("<div class='card'><div class='title'>Balance</div>", unsafe_allow_html=True)
-                st.metric(label="", value=f"{int(bal) if isinstance(bal, float) and bal.is_integer() else bal}")
-                st.markdown("</div>", unsafe_allow_html=True)
-        
-            st.write("")
-            used_pct = pct(taken, allow)
-            st.markdown("**Usage**")
-            st.progress(int(used_pct), text=f"{used_pct:.0f}% of allowance used")
-            st.markdown(f"<div class='muted'>You have {bal:.0f} remaining out of {allow:.0f}.</div>", unsafe_allow_html=True)
-        
-        elif nav == "Request update":
-            st.subheader("Request an update")
-        
-            req_type = st.selectbox(
-                "Request type",
-                ["Leave balance query", "Contact change", "Billing question", "Other"],
-                key="req_type"
-            )
-            msg = st.text_area(
-                "Message",
-                placeholder="What would you like us to update or check?",
-                key="req_msg"
-            )
-        
-            send = st.button("Send request", type="primary", key="req_send_btn")
-            if send:
-                try:
-                    append_request(member, req_type, (msg or "").strip())
-                    st.success("Thanks — we received your request.")
-                    # Optionally clear inputs
-                    st.session_state._
+        msg = st.text_area(
+            "Message",
+            placeholder="What would you like us to update or check?",
+            key="req_msg"
+        )
+
+        send = st.button("Send request", type="primary", key="req_send_btn")
+        if send:
+            try:
+                append_request(member, req_type, (msg or "").strip())
+                st.success("Thanks — we received your request.")
+                # Optionally clear inputs
+                st.session_state.req_type = "Leave balance query"
+                st.session_state.req_msg = ""
+            except Exception as e:
+                st.error(f"Could not submit request: {e}")
+
+    elif nav == "My requests":
+        st.subheader("My requests")
+        try:
+            gc = get_gsheets_client()
+            r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+            r_df = pd.DataFrame(r_ws.get_all_records())
+            if not r_df.empty and "MemberEmail" in r_df.columns:
+                mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+                show_cols = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in mine.columns]
+                st.dataframe(
+                    mine[show_cols].sort_values("Timestamp", ascending=False),
+                    use_container_width=True, hide_index=True
+                )
+            else:
+                st.info("No requests yet.")
+        except Exception as e:
+            st.error(f"Could not load requests: {e}")
+
+    elif nav == "Dojo info":
+        st.subheader("Dojo info")
+        st.markdown("""
+- **Timetable:** See our latest class times on the noticeboard or website.
+- **Leave policy:** Members have an annual allowance; please submit requests early where possible.
+- **Contact:** admin@yourdojo.com · 0400 000 000
+        """)
 
 # ---- logged-out view ----
 else:
