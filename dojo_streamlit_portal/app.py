@@ -171,26 +171,28 @@ if st.session_state.member is not None:
     req_type = st.selectbox(
         "Request type",
         ["Leave balance query", "Contact change", "Billing question", "Other"],
-        key="req_type"     # ← stable key
+        key="req_type"  # stable key
     )
 
     msg = st.text_area(
         "Message",
         placeholder="What would you like us to update or check?",
-        key="req_msg"      # ← stable key
+        key="req_msg"  # stable key
     )
 
-    # Use a keyed button; optional help text
+    # Button with stable key
     send = st.button("Send request", type="primary", key="req_send_btn")
     if send:
         try:
             append_request(member, req_type, (msg or "").strip())
             st.success("Thanks — we received your request.")
-            # Optionally clear inputs after submit:
+
+            # Optionally clear inputs after submit
             st.session_state.req_type = "Leave balance query"
             st.session_state.req_msg = ""
         except Exception as e:
             st.error(f"Could not submit request: {e}")
+
 
     with tab3:
         st.subheader("My requests")
