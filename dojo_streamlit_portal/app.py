@@ -8,6 +8,9 @@ import pytz
 
 st.set_page_config(page_title="Dojo Member Portal", page_icon="🥋")
 
+if "member" not in st.session_state:
+    st.session_state.member = None
+
 # --- Styling ---
 st.markdown("""
     <style>
@@ -70,11 +73,12 @@ def append_request(member, req_type, message):
 st.markdown("## 🥋 Dojo Member Portal")
 st.caption("View your leave balance and request simple updates.")
 
+# --- Login form ---
 with st.form("login"):
     email = st.text_input("Your email", placeholder="you@example.com")
     pin = st.text_input("PIN", type="password", placeholder="4–8 digits (ask the dojo if unsure)")
     submitted = st.form_submit_button("View my balance")
-member = None
+
 if submitted:
     try:
         df = load_members_df()
@@ -85,12 +89,27 @@ if submitted:
             st.error(f"Your Members sheet is missing columns: {', '.join(missing)}")
         else:
             member = find_member(df, email, pin)
-            if not member is None:
+            if member is not None:
+                # ✅ Save login into session state
+                st.session_state.member = member.to_dict() if hasattr(member, "to_dict") else dict(member)
                 st.success("Found your record.")
             else:
                 st.error("No match found. Check your email/PIN or contact the dojo.")
     except Exception as e:
         st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
+        
+if st.session_state.get("member") is not None:
+    member = st.session_state.member
+    # render tabs / balance here
+
+ # 🔒 Logout button
+    if st.button("Logout"):
+        st.session_state.member = None
+        st.experimental_rerun()
+        
+else:
+    st.info("Enter your email and PIN to view your balance.")
+
 
 def pct(a, b):
     try:
