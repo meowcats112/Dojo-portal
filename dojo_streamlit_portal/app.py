@@ -93,28 +93,29 @@ if st.session_state.member is None:
             missing = [c for c in required_cols if c not in df.columns]
             if missing:
                 st.error(f"Your Members sheet is missing columns: {', '.join(missing)}")
-        else:
-            # Find all rows that match this email + PIN
-            matches = df[
-                (df["Email"].str.strip().str.lower() == email.strip().lower())
-                & (df["PIN"].astype(str) == pin)
-            ]
-            
-            if not matches.empty:
-                if len(matches) > 1:
-                    # More than one student under this account → let user pick
-                    student_names = matches["MemberName"].tolist()
-                    chosen = st.selectbox("Select a student", student_names, key="student_picker")
-                    member_row = matches[matches["MemberName"] == chosen].iloc[0].to_dict()
-                else:
-                    # Just one student
-                    member_row = matches.iloc[0].to_dict()
-            
-                st.session_state.member = member_row
-                st.success("Found your record.")
-                st.rerun()
             else:
-                st.error("No match found. Check your email/PIN or contact the dojo.")
+                # Find all rows that match this email + PIN
+                matches = df[
+                    (df["Email"].str.strip().str.lower() == email.strip().lower())
+                    & (df["PIN"].astype(str) == pin)
+                ]
+                
+                if not matches.empty:
+                    if len(matches) > 1:
+                        # More than one student under this account → let user pick
+                        student_names = matches["MemberName"].tolist()
+                        chosen = st.selectbox("Select a student", student_names, key="student_picker")
+                        member_row = matches[matches["MemberName"] == chosen].iloc[0].to_dict()
+                    else:
+                        # Just one student
+                        member_row = matches.iloc[0].to_dict()
+                
+                    st.session_state.member = member_row
+                    st.success("Found your record.")
+                    st.rerun()
+                else:
+                    st.error("No match found. Check your email/PIN or contact the dojo.")
+                    
         except Exception as e:
             st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
 
