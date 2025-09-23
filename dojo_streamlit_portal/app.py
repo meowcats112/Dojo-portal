@@ -120,7 +120,7 @@ if st.button("Logout"):
         st.session_state.member = None
         st.rerun()
 
-    # Pull fields
+  # Pull fields
     name    = member.get("MemberName","")
     year    = member.get("LeaveYear","")
     allow   = as_float(member.get("AnnualAllowance", 0))
