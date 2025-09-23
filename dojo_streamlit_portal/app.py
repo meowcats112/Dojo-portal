@@ -73,29 +73,30 @@ def append_request(member, req_type, message):
 st.markdown("## 🥋 Dojo Member Portal")
 st.caption("View your leave balance and request simple updates.")
 
-# --- Login form ---
-with st.form("login"):
-    email = st.text_input("Your email", placeholder="you@example.com")
-    pin = st.text_input("PIN", type="password", placeholder="4–8 digits (ask the dojo if unsure)")
-    submitted = st.form_submit_button("View my balance")
+# --- Login form (only show if not already logged in) ---
+if st.session_state.member is None:
+    with st.form("login"):
+        email = st.text_input("Your email", placeholder="you@example.com")
+        pin = st.text_input("PIN", type="password", placeholder="4–8 digits (ask the dojo if unsure)")
+        submitted = st.form_submit_button("View my balance")
 
-if submitted:
-    try:
-        df = load_members_df()
-        required_cols = {"MemberID","MemberName","Email","LeaveYear","AnnualAllowance","LeaveTaken","LeaveBalance","LastUpdated"}
-        missing = [c for c in required_cols if c not in df.columns]
-        if missing:
-            st.error(f"Your Members sheet is missing columns: {', '.join(missing)}")
-        else:
-            m = find_member(df, email, pin)
-            if m is not None:
-                # save to session state (dict)
-                st.session_state.member = m.to_dict() if hasattr(m, "to_dict") else dict(m)
-                st.success("Found your record.")
+    if submitted:
+        try:
+            df = load_members_df()
+            required_cols = {"MemberID","MemberName","Email","LeaveYear","AnnualAllowance","LeaveTaken","LeaveBalance","LastUpdated"}
+            missing = [c for c in required_cols if c not in df.columns]
+            if missing:
+                st.error(f"Your Members sheet is missing columns: {', '.join(missing)}")
             else:
-                st.error("No match found. Check your email/PIN or contact the dojo.")
-    except Exception as e:
-        st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
+                m = find_member(df, email, pin)
+                if m is not None:
+                    st.session_state.member = m.to_dict() if hasattr(m, "to_dict") else dict(m)
+                    st.success("Found your record.")
+                    st.rerun()  # instantly rerun so login form disappears
+                else:
+                    st.error("No match found. Check your email/PIN or contact the dojo.")
+        except Exception as e:
+            st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
 
 # ---- logged-in view ----
 if st.session_state.member is not None:
