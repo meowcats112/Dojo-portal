@@ -129,12 +129,12 @@ if st.session_state.member is not None:
     email   = member.get("Email","")
     
     # --- Navigation (radio buttons that look like tabs) ---
-    nav = st.radio(
-        "Navigation",
-        ["My balance", "Request update", "My requests", "Dojo info"],
-        horizontal=True,
-        key="main_tabs"  # remembers selection across reruns
-    )
+        nav = st.radio(
+            "Navigation",
+            ["My balance", "Request update", "My requests", "Dojo info"],
+            horizontal=True,
+            key="main_tabs"  # remembers selection across reruns
+        )
 
         if nav == "My balance":
             st.markdown(f"**{name}**  ·  {email}")
