@@ -113,14 +113,14 @@ def as_float(x, default=0):
 
 # ✅ Only one check now, using session_state
 if st.session_state.member is not None:
-    member = st.session_state.member   # get saved login
+    member = st.session_state.member
 
     # 🔒 Logout button
-if st.button("Logout"):
+    if st.button("Logout"):
         st.session_state.member = None
         st.rerun()
 
-  # Pull fields
+    # Pull fields
     name    = member.get("MemberName","")
     year    = member.get("LeaveYear","")
     allow   = as_float(member.get("AnnualAllowance", 0))
