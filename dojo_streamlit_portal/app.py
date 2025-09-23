@@ -92,23 +92,93 @@ if submitted:
     except Exception as e:
         st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
 
-if member is not None:
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Year", member.get("LeaveYear",""))
-    col2.metric("Allowance", member.get("AnnualAllowance",""))
-    col3.metric("Taken", member.get("LeaveTaken",""))
-    col4.metric("Balance", member.get("LeaveBalance",""))
-    st.caption(f"Last updated: {member.get('LastUpdated','')}")
-    st.divider()
+def pct(a, b):
+    try:
+        a = float(a); b = float(b)
+        return 0 if b <= 0 else max(0, min(100, (a / b) * 100))
+    except Exception:
+        return 0
 
-    st.subheader("Request an update")
-    req_type = st.selectbox("Request type", ["Leave balance query","Contact change","Billing question","Other"])
-    msg = st.text_area("Message")
-    if st.button("Send request"):
+def as_float(x, default=0):
+    try:
+        return float(x)
+    except Exception:
+        return default
+
+if member is not None:
+    # Pull fields
+    name   = member.get("MemberName","")
+    year   = member.get("LeaveYear","")
+    allow  = as_float(member.get("AnnualAllowance", 0))
+    taken  = as_float(member.get("LeaveTaken", 0))
+    bal    = as_float(member.get("LeaveBalance", 0))
+    updated= member.get("LastUpdated","")
+    email  = member.get("Email","")
+
+    # Tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["My balance", "Request update", "My requests", "Dojo info"])
+
+    with tab1:
+        st.markdown(f"**{name}**  ·  {email}")
+        st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
+        st.write("")
+
+        # Card layout with metrics
+        c1, c2, c3 = st.columns([1,1,1])
+        with c1:
+            st.markdown("<div class='card'><div class='title'>Allowance</div>", unsafe_allow_html=True)
+            st.metric(label="", value=f"{int(allow) if allow.is_integer() else allow}")
+            st.markdown("</div>", unsafe_allow_html=True)
+        with c2:
+            st.markdown("<div class='card'><div class='title'>Taken</div>", unsafe_allow_html=True)
+            st.metric(label="", value=f"{int(taken) if taken.is_integer() else taken}")
+            st.markdown("</div>", unsafe_allow_html=True)
+        with c3:
+            st.markdown("<div class='card'><div class='title'>Balance</div>", unsafe_allow_html=True)
+            st.metric(label="", value=f"{int(bal) if bal.is_integer() else bal}")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.write("")
+        # Progress bar for taken vs allowance
+        used_pct = pct(taken, allow)
+        st.markdown("**Usage**")
+        st.progress(int(used_pct), text=f"{used_pct:.0f}% of allowance used")
+
+        # Optional: little summary
+        st.markdown(f"<div class='muted'>You have {bal:.0f} remaining out of {allow:.0f}.</div>", unsafe_allow_html=True)
+
+    with tab2:
+        st.subheader("Request an update")
+        req_type = st.selectbox("Request type", ["Leave balance query","Contact change","Billing question","Other"])
+        msg = st.text_area("Message", placeholder="What would you like us to update or check?")
+        if st.button("Send request", type="primary"):
+            try:
+                append_request(member, req_type, (msg or "").strip())
+                st.success("Thanks — we received your request.")
+            except Exception as e:
+                st.error(f"Could not submit request: {e}")
+
+    with tab3:
+        st.subheader("My requests")
+        # Load requests and filter to this user
         try:
-            append_request(member, req_type, msg.strip())
-            st.success("Thanks — we received your request.")
+            gc = get_gsheets_client()
+            r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+            r_df = pd.DataFrame(r_ws.get_all_records())
+            if not r_df.empty and "MemberEmail" in r_df.columns:
+                mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+                show_cols = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in mine.columns]
+                st.dataframe(mine[show_cols].sort_values("Timestamp", ascending=False), use_container_width=True, hide_index=True)
+            else:
+                st.info("No requests yet.")
         except Exception as e:
-            st.error(f"Could not submit request: {e}")
-else:
-    st.info("Enter your email and PIN to view your balance.")
+            st.error(f"Could not load requests: {e}")
+
+    with tab4:
+        st.subheader("Dojo info")
+        st.markdown("""
+- **Timetable:** See our latest class times on the noticeboard or website.
+- **Leave policy:** Members have an annual allowance; please submit requests early where possible.
+- **Contact:** admin@yourdojo.com · 0400 000 000
+        """)
+Improve layout with tabs + progress bar
