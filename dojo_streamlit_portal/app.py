@@ -123,6 +123,23 @@ if st.session_state.member is None:
 if st.session_state.member is not None:
     member = st.session_state.member
 
+     # Check if this email/PIN has multiple students
+    try:
+        df = load_members_df()
+        matches = df[
+            (df["Email"].str.strip().str.lower() == member["Email"].strip().lower())
+            & (df["PIN"].astype(str) == str(member["PIN"]))
+        ]
+        if len(matches) > 1:
+            student_names = matches["MemberName"].tolist()
+            chosen = st.selectbox("Select a student", student_names, index=student_names.index(member["MemberName"]), key="student_picker")
+            # Update the active student if changed
+            new_row = matches[matches["MemberName"] == chosen].iloc[0].to_dict()
+            st.session_state.member = new_row
+            member = new_row
+    except Exception as e:
+        st.error(f"Could not load student list: {e}")
+
     # Pull fields
     def as_float(x, default=0):
         try:
