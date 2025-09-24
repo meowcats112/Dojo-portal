@@ -113,6 +113,9 @@ def append_leave_request(member: dict, start_monday, weeks: int, reason="Persona
             msg += f" | Desc: {description.strip()}"
         ws.append_row(base[:4] + [msg] + base[5:])
 
+def _eq_str(a, b):
+    return str(a).strip().lower() == str(b).strip().lower()
+
 
 # --- UI ---
 # Heading + logout row
@@ -298,10 +301,12 @@ if st.session_state.member is not None:
     
             if not r_df.empty:
                 mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
-                if not mine.empty:
-                    # Only leave requests
-                    if "RequestType" in mine.columns:
-                        mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
+                if "MemberID" in mine.columns:
+                    mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
+                    if not mine.empty:
+                        # Only leave requests
+                        if "RequestType" in mine.columns:
+                            mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
     
                     # Try parse FromDate/ToDate (DD-MM-YYYY or other); fall back to message parsing if needed
                     if "FromDate" in mine.columns and "ToDate" in mine.columns:
@@ -374,34 +379,43 @@ if st.session_state.member is not None:
             if r_df.empty:
                 st.info("No requests yet.")
             else:
-                # Filter to this member
-                mine = r_df[r_df.get("MemberEmail", "").astype(str).str.strip().str.lower()
-                            == str(email).strip().lower()]
-    
+                # Filter to this member (email + MemberID)
+                mine = r_df[
+                    r_df.get("MemberEmail", "").astype(str).str.strip().str.lower()
+                    == str(email).strip().lower()
+                ]
+                
+                # Filter to this member (email + MemberID)
+                mine = r_df[
+                    r_df.get("MemberEmail", "").astype(str).str.strip().str.lower() == str(email).strip().lower()
+                ]
+                if "MemberID" in mine.columns:
+                    mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
+                
                 # Keep only leave requests if column exists
                 if "RequestType" in mine.columns:
                     mine = mine[mine["RequestType"].astype(str).str.strip().str.lower() == "leave request"]
-    
+                
                 total_count = len(mine)
                 pending_values = {"new", "pending", "in review", "in-progress", "submitted"}
                 pending_count = 0
-    
                 if "Status" in mine.columns and not mine.empty:
                     status_lower = mine["Status"].astype(str).str.strip().str.lower()
                     pending_count = status_lower.isin(pending_values).sum()
-    
-                # --- Toggle with counters ---
+                
+                # Toggle with counters
                 show_choice = st.radio(
                     "Show",
                     [f"Pending only ({pending_count})", f"All ({total_count})"],
                     horizontal=True,
                     key="myreq_filter"
                 )
-    
+                
                 # Apply filter based on selection
                 if "Status" in mine.columns and show_choice.startswith("Pending"):
                     status_lower = mine["Status"].astype(str).str.strip().str.lower()
                     mine = mine[status_lower.isin(pending_values)]
+
     
                 if mine.empty:
                     st.info("No requests matching this filter.")
