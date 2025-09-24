@@ -247,56 +247,56 @@ if st.session_state.member is not None:
         st.write("")  # spacer
 
     elif nav == "Leave request":
-    st.subheader("Request leave (weekly, starts Monday)")
-
-    import datetime as _dt
-    def next_monday(d: _dt.date) -> _dt.date:
-        return d if d.weekday() == 0 else d + _dt.timedelta(days=(7 - d.weekday()))
-
-    today = _dt.date.today()
-    default_start = next_monday(today)
-    start_sel = st.date_input(
-        "Start date (must be a Monday)",
-        value=default_start,
-        key="lr_start_monday"
-    )
-
-    weeks = st.number_input(
-        "Number of weeks",
-        min_value=1, step=1, value=1,
-        help="Leave is taken in whole weeks (Mon–Sun).",
-        key="lr_weeks"
-    )
-
-    reason = st.selectbox(
-        "Leave reason",
-        ["Personal", "Injury or Serious Illness"],
-        key="lr_reason"
-    )
-
-    description = st.text_input(
-        "Short description (optional)",
-        max_chars=120,
-        key="lr_desc"
-    )
-
-    snapped_start = next_monday(start_sel)
-    if start_sel.weekday() != 0:
-        st.info(f"Start date will be adjusted to Monday: **{snapped_start.strftime('%d-%m-%Y')}**")
-
-    end_date = snapped_start + _dt.timedelta(days=7 * int(weeks) - 1)
-    st.caption(f"Requested period: **{snapped_start.strftime('%d-%m-%Y')} → {end_date.strftime('%d-%m-%Y')}** ({int(weeks)} week(s))")
-
-    if st.button("Submit leave request", type="primary", key="lr_submit"):
-        try:
-            append_leave_request(member, snapped_start, int(weeks), reason, description)
-            st.success("Leave request submitted. We’ll review it soon.")
-            st.session_state.lr_weeks = 1
-            st.session_state.lr_desc = ""
-            st.session_state.lr_reason = "Personal"
-            st.session_state.lr_start_monday = next_monday(_dt.date.today())
-        except Exception as e:
-            st.error(f"Could not submit leave request: {e}")
+        st.subheader("Request leave (weekly, starts Monday)")
+    
+        import datetime as _dt
+        def next_monday(d: _dt.date) -> _dt.date:
+            return d if d.weekday() == 0 else d + _dt.timedelta(days=(7 - d.weekday()))
+    
+        today = _dt.date.today()
+        default_start = next_monday(today)
+        start_sel = st.date_input(
+            "Start date (must be a Monday)",
+            value=default_start,
+            key="lr_start_monday"
+        )
+    
+        weeks = st.number_input(
+            "Number of weeks",
+            min_value=1, step=1, value=1,
+            help="Leave is taken in whole weeks (Mon–Sun).",
+            key="lr_weeks"
+        )
+    
+        reason = st.selectbox(
+            "Leave reason",
+            ["Personal", "Injury or Serious Illness"],
+            key="lr_reason"
+        )
+    
+        description = st.text_input(
+            "Short description (optional)",
+            max_chars=120,
+            key="lr_desc"
+        )
+    
+        snapped_start = next_monday(start_sel)
+        if start_sel.weekday() != 0:
+            st.info(f"Start date will be adjusted to Monday: **{snapped_start.strftime('%d-%m-%Y')}**")
+    
+        end_date = snapped_start + _dt.timedelta(days=7 * int(weeks) - 1)
+        st.caption(f"Requested period: **{snapped_start.strftime('%d-%m-%Y')} → {end_date.strftime('%d-%m-%Y')}** ({int(weeks)} week(s))")
+    
+        if st.button("Submit leave request", type="primary", key="lr_submit"):
+            try:
+                append_leave_request(member, snapped_start, int(weeks), reason, description)
+                st.success("Leave request submitted. We’ll review it soon.")
+                st.session_state.lr_weeks = 1
+                st.session_state.lr_desc = ""
+                st.session_state.lr_reason = "Personal"
+                st.session_state.lr_start_monday = next_monday(_dt.date.today())
+            except Exception as e:
+                st.error(f"Could not submit leave request: {e}")
 
 
     elif nav == "Request update":
