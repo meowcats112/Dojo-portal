@@ -210,6 +210,30 @@ if st.session_state.member is not None:
     st.markdown(f"**{name}**  ·  {email}")
     st.write("")  # spacer
 
+    # --- Total weeks badge for this member (sum of their Leave requests) ---
+    try:
+        gc = get_gsheets_client()
+        r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+        req_df = pd.DataFrame(r_ws.get_all_records())
+    
+        total_weeks = 0
+        if not req_df.empty:
+            mine = req_df[req_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+            if not mine.empty:
+                if "RequestType" in mine.columns:
+                    mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
+                if "Weeks" in mine.columns:
+                    # Coerce to numeric and ignore NaN
+                    total_weeks = pd.to_numeric(mine["Weeks"], errors="coerce").fillna(0).astype(int).sum()
+    
+        cols = st.columns([1, 3])
+        with cols[0]:
+            st.metric(label="Total leave requested (weeks)", value=int(total_weeks))
+    except Exception as _e:
+        pass  # badge is best-effort; don't block UI
+    
+    st.write("")  # spacer
+
     # --- Navigation (radio buttons that look like tabs) ---
     nav = st.radio(
         "Navigation",
@@ -288,6 +312,45 @@ if st.session_state.member is not None:
         st.caption(f"Requested period: **{snapped_start.strftime('%d-%m-%Y')} → {end_date.strftime('%d-%m-%Y')}** ({int(weeks)} week(s))")
     
         if st.button("Submit leave request", type="primary", key="lr_submit"):
+             # --- Overlap validation: check existing leave requests for this member ---
+            gc = get_gsheets_client()
+            r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+            r_df = pd.DataFrame(r_ws.get_all_records())
+    
+            overlap_found = False
+            conflict_rows = pd.DataFrame()
+    
+            if not r_df.empty:
+                mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+                if not mine.empty:
+                    # Only leave requests
+                    if "RequestType" in mine.columns:
+                        mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
+    
+                    # Try parse FromDate/ToDate (DD-MM-YYYY or other); fall back to message parsing if needed
+                    if "FromDate" in mine.columns and "ToDate" in mine.columns:
+                        start_new = snapped_start
+                        end_new = end_date
+    
+                        # Parse with dayfirst for DD-MM-YYYY
+                        mine["_from"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True)
+                        mine["_to"]   = pd.to_datetime(mine["ToDate"],   errors="coerce", dayfirst=True)
+    
+                        # Any overlap if: existing_from <= new_end AND existing_to >= new_start
+                        conflict_mask = (mine["_from"].notna() & mine["_to"].notna() &
+                                         (mine["_from"].dt.date <= end_new) &
+                                         (mine["_to"].dt.date   >= start_new))
+                        conflict_rows = mine[conflict_mask]
+                        overlap_found = not conflict_rows.empty
+    
+            if overlap_found:
+                # Show conflicts with friendly dates
+                show = conflict_rows.copy()
+                show["FromDate"] = pd.to_datetime(show["_from"]).dt.strftime("%d-%m-%Y")
+                show["ToDate"]   = pd.to_datetime(show["_to"]).dt.strftime("%d-%m-%Y")
+                st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
+                st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
+                             use_container_width=True, hide_index=True)
             try:
                 append_leave_request(member, snapped_start, int(weeks), reason, description)
                 st.success("Leave request submitted. We’ll review it soon.")
@@ -325,20 +388,48 @@ if st.session_state.member is not None:
                 st.error(f"Could not submit request: {e}")
 
     elif nav == "My requests":
-        st.subheader("My requests")
+        st.subheader("My leave requests")
         try:
             gc = get_gsheets_client()
             r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
             r_df = pd.DataFrame(r_ws.get_all_records())
-            if not r_df.empty and "MemberEmail" in r_df.columns:
-                mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
-                show_cols = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in mine.columns]
-                st.dataframe(
-                    mine[show_cols].sort_values("Timestamp", ascending=False),
-                    use_container_width=True, hide_index=True
-                )
-            else:
+    
+            if r_df.empty:
                 st.info("No requests yet.")
+            else:
+                mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+                if mine.empty:
+                    st.info("No requests yet.")
+                else:
+                    # Only leave requests
+                    if "RequestType" in mine.columns:
+                        mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
+    
+                    # Format dates in DD-MM-YYYY when present
+                    if "FromDate" in mine.columns:
+                        mine["FromDate"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                    if "ToDate" in mine.columns:
+                        mine["ToDate"] = pd.to_datetime(mine["ToDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                    if "Timestamp" in mine.columns:
+                        # handle both our new DD-MM-YYYY and any older formats
+                        ts = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
+                        mine["Timestamp"] = ts.dt.strftime("%d-%m-%Y %H:%M")
+    
+                    # Choose columns to show
+                    cols_order = []
+                    for c in ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"]:
+                        if c in mine.columns:
+                            cols_order.append(c)
+                    if not cols_order:
+                        # Fallback if structured columns don’t exist yet
+                        cols_order = [c for c in ["Timestamp","Message","Status","AdminNotes"] if c in mine.columns]
+    
+                    # Sort newest first
+                    if "Timestamp" in mine.columns:
+                        # Use the parsed 'ts' if available; else sort by string
+                        mine["_ts"] = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
+                        mine = mine.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
+                    st.dataframe(mine[cols_order], use_container_width=True, hide_index=True)
         except Exception as e:
             st.error(f"Could not load requests: {e}")
 
