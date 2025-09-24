@@ -69,6 +69,49 @@ def append_request(member, req_type, message):
         ""
     ])
 
+def append_leave_request(member: dict, start_monday, weeks: int, reason="Personal", description=""):
+    """Append a weekly leave request (start on Monday, minimum 1 week). Falls back to Message if columns missing."""
+    tz = pytz.timezone("Australia/Sydney")
+    ts = datetime.now(tz).strftime("%Y-%m-%d %H:%M:%S")
+    gc = get_gsheets_client()
+    ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+
+    # Compute end date (inclusive): Monday + 7*weeks - 1 day (ends on Sunday)
+    start_monday = pd.to_datetime(start_monday).date()
+    end_date = (start_monday + pd.Timedelta(days=7 * weeks - 1)).date()
+
+    headers = ws.row_values(1)
+    have = {h: (h in headers) for h in ["StudentName","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription"]}
+
+    base = [
+        ts,
+        member.get("Email",""),
+        member.get("MemberID",""),
+        "Leave request",
+        "",  # Message (blank if we have structured cols)
+        "New",
+        "",
+        ""
+    ]
+
+    if all(have.values()):
+        row = base + [
+            member.get("MemberName",""),
+            start_monday.isoformat(),
+            end_date.isoformat(),
+            int(weeks),
+            reason,
+            description.strip()
+        ]
+        ws.append_row(row)
+    else:
+        msg = f"Leave request | {member.get('MemberName','')} | {start_monday.isoformat()} → {end_date.isoformat()} | {weeks} week(s) | Reason: {reason}"
+        if description.strip():
+            msg += f" | Desc: {description.strip()}"
+        ws.append_row(base[:4] + [msg] + base[5:])
+
+
+
 # --- UI ---
 # Heading + logout row
 col1, col2 = st.columns([6,1])  # wide column for heading, small one for button
@@ -168,7 +211,7 @@ if st.session_state.member is not None:
     # --- Navigation (radio buttons that look like tabs) ---
     nav = st.radio(
         "Navigation",
-        ["My balance", "Request update", "My requests", "Dojo info"],
+        ["My balance", "Leave Request", "Request update", "My requests", "Dojo info"],
         horizontal=True,
         key="main_tabs"  # remembers selection across reruns
     )
@@ -200,6 +243,64 @@ if st.session_state.member is not None:
         st.write("")  # spacer
         st.markdown(f"<div class='muted'>Year: {year} · Last updated: {updated}</div>", unsafe_allow_html=True)
         st.write("")  # spacer
+
+    elif nav == "Leave request":
+    st.subheader("Request leave (weekly, starts Monday)")
+
+    # Helper to get next Monday (including today if Monday)
+    import datetime as _dt
+    def next_monday(d: _dt.date) -> _dt.date:
+        return d if d.weekday() == 0 else d + _dt.timedelta(days=(7 - d.weekday()))
+
+    # Start date input (will be snapped to Monday on submit)
+    today = _dt.date.today()
+    default_start = next_monday(today)
+    start_sel = st.date_input(
+        "Start date (must be a Monday)",
+        value=default_start,
+        key="lr_start_monday"
+    )
+
+    weeks = st.number_input(
+        "Number of weeks",
+        min_value=1, step=1, value=1,
+        help="Leave is taken in whole weeks (Mon–Sun).",
+        key="lr_weeks"
+    )
+
+    reason = st.selectbox(
+        "Leave reason",
+        ["Personal", "Injury or Serious Illness"],
+        key="lr_reason"
+    )
+
+    description = st.text_input(
+        "Short description (optional)",
+        max_chars=120,
+        key="lr_desc"
+    )
+
+    # Preview (snap to next Monday if user picked a non-Monday)
+    snapped_start = next_monday(start_sel)
+    if start_sel.weekday() != 0:
+        st.info(f"Start date will be adjusted to Monday: **{snapped_start.isoformat()}**")
+
+    # Compute and preview end date
+    end_date = snapped_start + _dt.timedelta(days=7 * int(weeks) - 1)
+    st.caption(f"Requested period: **{snapped_start.isoformat()} → {end_date.isoformat()}** ({int(weeks)} week(s))")
+
+    if st.button("Submit leave request", type="primary", key="lr_submit"):
+        try:
+            append_leave_request(member, snapped_start, int(weeks), reason, description)
+            st.success("Leave request submitted. We’ll review it soon.")
+            # Optional resets
+            st.session_state.lr_weeks = 1
+            st.session_state.lr_desc = ""
+            st.session_state.lr_reason = "Personal"
+            st.session_state.lr_start_monday = next_monday(_dt.date.today())
+        except Exception as e:
+            st.error(f"Could not submit leave request: {e}")
+
 
     elif nav == "Request update":
         st.subheader("Request an update")
