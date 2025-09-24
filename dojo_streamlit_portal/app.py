@@ -211,7 +211,7 @@ if st.session_state.member is not None:
     # --- Navigation (radio buttons that look like tabs) ---
     nav = st.radio(
         "Navigation",
-        ["My balance", "Leave Request", "Request update", "My requests", "Dojo info"],
+        ["My balance", "Leave request", "Request update", "My requests", "Dojo info"],
         horizontal=True,
         key="main_tabs"  # remembers selection across reruns
     )
