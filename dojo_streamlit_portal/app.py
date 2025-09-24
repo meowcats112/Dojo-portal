@@ -210,30 +210,6 @@ if st.session_state.member is not None:
     st.markdown(f"**{name}**  ·  {email}")
     st.write("")  # spacer
 
-    # --- Total weeks badge for this member (sum of their Leave requests) ---
-    try:
-        gc = get_gsheets_client()
-        r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
-        req_df = pd.DataFrame(r_ws.get_all_records())
-    
-        total_weeks = 0
-        if not req_df.empty:
-            mine = req_df[req_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
-            if not mine.empty:
-                if "RequestType" in mine.columns:
-                    mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
-                if "Weeks" in mine.columns:
-                    # Coerce to numeric and ignore NaN
-                    total_weeks = pd.to_numeric(mine["Weeks"], errors="coerce").fillna(0).astype(int).sum()
-    
-        cols = st.columns([1, 3])
-        with cols[0]:
-            st.metric(label="Total leave requested (weeks)", value=int(total_weeks))
-    except Exception as _e:
-        pass  # badge is best-effort; don't block UI
-    
-    st.write("")  # spacer
-
     # --- Navigation (radio buttons that look like tabs) ---
     nav = st.radio(
         "Navigation",
@@ -389,6 +365,7 @@ if st.session_state.member is not None:
 
     elif nav == "My requests":
         st.subheader("My leave requests")
+    
         try:
             gc = get_gsheets_client()
             r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
@@ -405,31 +382,49 @@ if st.session_state.member is not None:
                     if "RequestType" in mine.columns:
                         mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
     
-                    # Format dates in DD-MM-YYYY when present
-                    if "FromDate" in mine.columns:
-                        mine["FromDate"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
-                    if "ToDate" in mine.columns:
-                        mine["ToDate"] = pd.to_datetime(mine["ToDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
-                    if "Timestamp" in mine.columns:
-                        # handle both our new DD-MM-YYYY and any older formats
-                        ts = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
-                        mine["Timestamp"] = ts.dt.strftime("%d-%m-%Y %H:%M")
+                    # ---------- Toggle: Pending only vs All ----------
+                    # Treat these statuses as "pending"
+                    pending_values = {"new", "pending", "in review", "in-progress", "submitted"}
+                    show_choice = st.radio(
+                        "Show",
+                        ["Pending only", "All"],
+                        horizontal=True,
+                        key="myreq_filter"
+                    )
     
-                    # Choose columns to show
-                    cols_order = []
-                    for c in ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"]:
-                        if c in mine.columns:
-                            cols_order.append(c)
-                    if not cols_order:
-                        # Fallback if structured columns don’t exist yet
-                        cols_order = [c for c in ["Timestamp","Message","Status","AdminNotes"] if c in mine.columns]
+                    if "Status" in mine.columns:
+                        status_lower = mine["Status"].astype(str).str.strip().str.lower()
+                        if show_choice == "Pending only":
+                            mine = mine[status_lower.isin(pending_values)]
+                    # -------------------------------------------------
     
-                    # Sort newest first
-                    if "Timestamp" in mine.columns:
-                        # Use the parsed 'ts' if available; else sort by string
-                        mine["_ts"] = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
-                        mine = mine.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
-                    st.dataframe(mine[cols_order], use_container_width=True, hide_index=True)
+                    if mine.empty:
+                        st.info("No requests matching this filter.")
+                    else:
+                        # Format dates in DD-MM-YYYY when present
+                        if "FromDate" in mine.columns:
+                            mine["FromDate"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                        if "ToDate" in mine.columns:
+                            mine["ToDate"] = pd.to_datetime(mine["ToDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                        if "Timestamp" in mine.columns:
+                            ts_parsed = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
+                            mine["Timestamp"] = ts_parsed.dt.strftime("%d-%m-%Y %H:%M")
+    
+                        # Choose columns to show
+                        cols_order = []
+                        for c in ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"]:
+                            if c in mine.columns:
+                                cols_order.append(c)
+                        if not cols_order:
+                            cols_order = [c for c in ["Timestamp","Message","Status","AdminNotes"] if c in mine.columns]
+    
+                        # Sort newest first
+                        if "Timestamp" in mine.columns:
+                            mine["_ts"] = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
+                            mine = mine.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
+    
+                        st.dataframe(mine[cols_order], use_container_width=True, hide_index=True)
+    
         except Exception as e:
             st.error(f"Could not load requests: {e}")
 
