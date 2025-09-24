@@ -276,6 +276,10 @@ if st.session_state.member is not None:
             ["Personal", "Injury or Serious Illness"],
             key="lr_reason"
         )
+
+        if reason == "Injury or Serious Illness":
+            st.warning("A medical certificate is required for injury or serious illness leave requests.")
+
     
         description = st.text_input(
             "Short description (optional)",
