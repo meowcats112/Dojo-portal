@@ -278,7 +278,7 @@ if st.session_state.member is not None:
         )
 
         if reason == "Injury or Serious Illness":
-            st.warning("A medical certificate stating nature of injury/illness and recovery time is required. \nPlease send through to admin@example.com")
+            st.warning("A medical certificate stating nature of injury/illness and recovery time is required.  \nPlease send through to admin@example.com")
 
     
         description = st.text_input(
