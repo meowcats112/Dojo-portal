@@ -374,59 +374,70 @@ if st.session_state.member is not None:
             if r_df.empty:
                 st.info("No requests yet.")
             else:
-                mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+                # Filter to this member
+                mine = r_df[r_df.get("MemberEmail", "").astype(str).str.strip().str.lower()
+                            == str(email).strip().lower()]
+    
+                # Keep only leave requests if column exists
+                if "RequestType" in mine.columns:
+                    mine = mine[mine["RequestType"].astype(str).str.strip().str.lower() == "leave request"]
+    
+                total_count = len(mine)
+                pending_values = {"new", "pending", "in review", "in-progress", "submitted"}
+                pending_count = 0
+    
+                if "Status" in mine.columns and not mine.empty:
+                    status_lower = mine["Status"].astype(str).str.strip().str.lower()
+                    pending_count = status_lower.isin(pending_values).sum()
+    
+                # --- Toggle with counters ---
+                show_choice = st.radio(
+                    "Show",
+                    [f"Pending only ({pending_count})", f"All ({total_count})"],
+                    horizontal=True,
+                    key="myreq_filter"
+                )
+    
+                # Apply filter based on selection
+                if "Status" in mine.columns and show_choice.startswith("Pending"):
+                    status_lower = mine["Status"].astype(str).str.strip().str.lower()
+                    mine = mine[status_lower.isin(pending_values)]
+    
                 if mine.empty:
-                    st.info("No requests yet.")
+                    st.info("No requests matching this filter.")
                 else:
-                    # Only leave requests
-                    if "RequestType" in mine.columns:
-                        mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
+                    # Format dates in DD-MM-YYYY
+                    if "FromDate" in mine.columns:
+                        mine["FromDate"] = pd.to_datetime(
+                            mine["FromDate"], errors="coerce", dayfirst=True
+                        ).dt.strftime("%d-%m-%Y")
+                    if "ToDate" in mine.columns:
+                        mine["ToDate"] = pd.to_datetime(
+                            mine["ToDate"], errors="coerce", dayfirst=True
+                        ).dt.strftime("%d-%m-%Y")
+                    if "Timestamp" in mine.columns:
+                        ts_parsed = pd.to_datetime(
+                            mine["Timestamp"], errors="coerce", dayfirst=True
+                        )
+                        mine["Timestamp"] = ts_parsed.dt.strftime("%d-%m-%Y %H:%M")
     
-                    # ---------- Toggle: Pending only vs All ----------
-                    # Treat these statuses as "pending"
-                    pending_values = {"new", "pending", "in review", "in-progress", "submitted"}
-                    show_choice = st.radio(
-                        "Show",
-                        ["Pending only", "All"],
-                        horizontal=True,
-                        key="myreq_filter"
-                    )
+                    # Choose display columns
+                    cols_order = [c for c in
+                                  ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"]
+                                  if c in mine.columns]
+                    if not cols_order:
+                        cols_order = [c for c in ["Timestamp","Message","Status","AdminNotes"] if c in mine.columns]
     
-                    if "Status" in mine.columns:
-                        status_lower = mine["Status"].astype(str).str.strip().str.lower()
-                        if show_choice == "Pending only":
-                            mine = mine[status_lower.isin(pending_values)]
-                    # -------------------------------------------------
+                    # Sort newest first
+                    if "Timestamp" in mine.columns:
+                        mine["_ts"] = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
+                        mine = mine.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
     
-                    if mine.empty:
-                        st.info("No requests matching this filter.")
-                    else:
-                        # Format dates in DD-MM-YYYY when present
-                        if "FromDate" in mine.columns:
-                            mine["FromDate"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
-                        if "ToDate" in mine.columns:
-                            mine["ToDate"] = pd.to_datetime(mine["ToDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
-                        if "Timestamp" in mine.columns:
-                            ts_parsed = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
-                            mine["Timestamp"] = ts_parsed.dt.strftime("%d-%m-%Y %H:%M")
-    
-                        # Choose columns to show
-                        cols_order = []
-                        for c in ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"]:
-                            if c in mine.columns:
-                                cols_order.append(c)
-                        if not cols_order:
-                            cols_order = [c for c in ["Timestamp","Message","Status","AdminNotes"] if c in mine.columns]
-    
-                        # Sort newest first
-                        if "Timestamp" in mine.columns:
-                            mine["_ts"] = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
-                            mine = mine.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
-    
-                        st.dataframe(mine[cols_order], use_container_width=True, hide_index=True)
+                    st.dataframe(mine[cols_order], use_container_width=True, hide_index=True)
     
         except Exception as e:
             st.error(f"Could not load requests: {e}")
+
 
     elif nav == "Dojo info":
         st.subheader("Dojo info")
