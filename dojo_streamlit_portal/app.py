@@ -370,7 +370,10 @@ if st.session_state.member is not None:
         if detail_type == "Phone number":
             value = st.text_input("New phone number", key="upd_phone")
         elif detail_type == "Address":
-            value = st.text_area("New address", key="upd_addr")
+            addr1 = st.text_input("Address Line 1", key="upd_addr1")
+            addr2 = st.text_input("Address Line 2", key="upd_addr2")
+            suburb = st.text_input("Suburb", key="upd_suburb")
+            postcode = st.text_input("Post Code", key="upd_postcode")
         elif detail_type == "Email":
             value = st.text_input("New email address", key="upd_email")
     
