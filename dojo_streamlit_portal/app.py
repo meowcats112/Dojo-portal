@@ -356,23 +356,30 @@ if st.session_state.member is not None:
         st.subheader("Update contact details")
     
         with st.form("contact_update_form"):
+            # Choose what kind of detail to update
+            detail_type = st.selectbox(
+                "Which detail would you like to update?",
+                ["Phone number", "Address", "Email"],
+                key="upd_detail_type"
+            )
+    
+            # Always ask whose detail this is
             person_name = st.text_input("Name of person", key="upd_name")
-            phone = st.text_input("Phone number", key="upd_phone")
-            address = st.text_area("Address", key="upd_addr")
-            new_email = st.text_input("Email", key="upd_email")
+    
+            # Show the relevant input depending on selection
+            value = ""
+            if detail_type == "Phone number":
+                value = st.text_input("New phone number", key="upd_phone")
+            elif detail_type == "Address":
+                value = st.text_area("New address", key="upd_addr")
+            elif detail_type == "Email":
+                value = st.text_input("New email address", key="upd_email")
     
             submitted = st.form_submit_button("Submit update")
     
         if submitted:
             try:
-                # Build message
-                msg_parts = []
-                if person_name: msg_parts.append(f"Name: {person_name}")
-                if phone: msg_parts.append(f"Phone: {phone}")
-                if address: msg_parts.append(f"Address: {address}")
-                if new_email: msg_parts.append(f"Email: {new_email}")
-                msg = " | ".join(msg_parts)
-    
+                msg = f"{detail_type} update for {person_name}: {value}"
                 append_request(member, "Contact update", msg)
                 st.success("Your contact update has been submitted.")
             except Exception as e:
