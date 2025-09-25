@@ -255,7 +255,8 @@ if st.session_state.member is not None:
         # --- Reminder about dojo policy ---
         st.info(
         "Members may suspend their membership for 8 weeks per calendar year. " 
-        "The first 4 weeks will be free of charge and the following 4 weeks will be at a discounted rate of $10 per week. " 
+        "The first 4 weeks will be free of charge and the following 4 weeks will be at a discounted " 
+        "rate of $10 per week. " 
         "Suspensions must be submitted via the portal with a minimum of 14 days notice. "
         "Failure to do so may incur a $10 short-notice fee or result in request being rejected."
     )
