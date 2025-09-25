@@ -362,12 +362,10 @@ if st.session_state.member is not None:
             key="upd_detail_type"
         )
     
-        # Always ask for whose details
-        person_name = st.text_input("Name of person", key="upd_name")
-    
         # Show the relevant field right away (reactive)
         value = ""
         if detail_type == "Phone number":
+            person_name = st.text_input("Name of person", key="upd_name")
             value = st.text_input("New phone number", key="upd_phone")
         elif detail_type == "Address":
             addr1 = st.text_input("Address Line 1", key="upd_addr1")
@@ -375,6 +373,7 @@ if st.session_state.member is not None:
             suburb = st.text_input("Suburb", key="upd_suburb")
             postcode = st.text_input("Post Code", key="upd_postcode")
         elif detail_type == "Email":
+            person_name = st.text_input("Name of person", key="upd_name")
             value = st.text_input("New email address", key="upd_email")
     
         # Submit button (not inside a form, so everything updates live)
