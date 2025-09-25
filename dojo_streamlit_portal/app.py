@@ -307,7 +307,7 @@ if st.session_state.member is not None:
 
         # --- Reminder about dojo policy ---
         st.info(
-        "Members may suspend their membership for 8 weeks per calendar year.  \nThe first 4 weeks will be free of charge and the next 4 weeks will be at a discounted rate of \$10/week.   \nSuspensions must be submitted via the portal with a minimum of 14 days notice, except in case of injury or serious illness.  \nFailure to do so may incur a \$10 short-notice fee or result in request being rejected."
+        "Members may suspend their membership for 8 weeks per calendar year.  \nThe first 4 weeks will be free of charge and the next 4 weeks will be at a discounted rate of \$10/week.   \nSuspensions must be submitted via the portal with a minimum of 14 days notice.  \nFailure to do so may incur a \$10 short-notice fee or result in request being rejected.  \nExcept in case of injury or serious illness with valid medical certificate."
     )
     
         import datetime as _dt
