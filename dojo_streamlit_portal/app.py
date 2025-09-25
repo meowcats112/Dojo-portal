@@ -216,7 +216,7 @@ if st.session_state.member is not None:
     # --- Navigation (radio buttons that look like tabs) ---
     nav = st.radio(
         "Navigation",
-        ["My balance", "Leave request", "Request update", "My requests", "Dojo info"],
+        ["My balance", "Leave request", "Update contact details", "My requests", "Dojo info"],
         horizontal=True,
         key="main_tabs"  # remembers selection across reruns
     )
@@ -352,30 +352,32 @@ if st.session_state.member is not None:
                 st.error(f"Could not submit leave request: {e}")
 
 
-    elif nav == "Request update":
-        st.subheader("Request an update")
-
-        req_type = st.selectbox(
-            "Request type",
-            ["Leave balance query", "Contact change", "Billing question", "Other"],
-            key="req_type"
-        )
-        msg = st.text_area(
-            "Message",
-            placeholder="What would you like us to update or check?",
-            key="req_msg"
-        )
-
-        send = st.button("Send request", type="primary", key="req_send_btn")
-        if send:
+    elif nav == "Update contact details":
+        st.subheader("Update contact details")
+    
+        with st.form("contact_update_form"):
+            person_name = st.text_input("Name of person", key="upd_name")
+            phone = st.text_input("Phone number", key="upd_phone")
+            address = st.text_area("Address", key="upd_addr")
+            new_email = st.text_input("Email", key="upd_email")
+    
+            submitted = st.form_submit_button("Submit update")
+    
+        if submitted:
             try:
-                append_request(member, req_type, (msg or "").strip())
-                st.success("Thanks — we received your request.")
-                # Optionally clear inputs
-                st.session_state.req_type = "Leave balance query"
-                st.session_state.req_msg = ""
+                # Build message
+                msg_parts = []
+                if person_name: msg_parts.append(f"Name: {person_name}")
+                if phone: msg_parts.append(f"Phone: {phone}")
+                if address: msg_parts.append(f"Address: {address}")
+                if new_email: msg_parts.append(f"Email: {new_email}")
+                msg = " | ".join(msg_parts)
+    
+                append_request(member, "Contact update", msg)
+                st.success("Your contact update has been submitted.")
             except Exception as e:
-                st.error(f"Could not submit request: {e}")
+                st.error(f"Could not submit update: {e}")
+
 
     elif nav == "My requests":
         st.subheader("My leave requests")
