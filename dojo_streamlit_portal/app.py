@@ -116,6 +116,59 @@ def append_leave_request(member: dict, start_monday, weeks: int, reason="Persona
 def _eq_str(a, b):
     return str(a).strip().lower() == str(b).strip().lower()
 
+def append_contact_update(member: dict, update_type: str, update_name: str, *,
+                          phone: str = "", email: str = "",
+                          addr1: str = "", addr2: str = "", suburb: str = "", postcode: str = ""):
+    """Append a structured Contact update to the Requests sheet.
+    Works with your headers and only fills columns that exist."""
+    tz = pytz.timezone("Australia/Sydney")
+    ts = datetime.now(tz).strftime("%d-%m-%Y %H:%M:%S")
+
+    gc = get_gsheets_client()
+    ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+    headers = ws.row_values(1)
+
+    # Base required fields per your sheet
+    row_map = {
+        "Timestamp": ts,
+        "MemberEmail": member.get("Email", ""),
+        "MemberID": member.get("MemberID", ""),
+        "RequestType": "Contact update",
+        "Message": "",  # we'll keep this empty if structured cols exist
+        "FromDate": "",
+        "ToDate": "",
+        "LeaveReason": "",
+        "LeaveDescription": "",
+        "Status": "New",
+        "HandledBy": "",
+        "AdminNotes": "",
+        # Structured contact fields (only set if present)
+        "UpdateType": update_type,
+        "UpdateName": update_name,
+        "UpdatePhone": phone,
+        "UpdateEmail": email,
+        "Addr1": addr1,
+        "Addr2": addr2,
+        "Suburb": suburb,
+        "PostCode": postcode,
+    }
+
+    # If structured columns are missing, put everything into Message for safety
+    structured_cols = ["UpdateType","UpdateName","UpdatePhone","UpdateEmail","Addr1","Addr2","Suburb","PostCode"]
+    if not any(c in headers for c in structured_cols):
+        parts = [f"Type: {update_type}", f"Name: {update_name}"]
+        if phone: parts.append(f"Phone: {phone}")
+        if email: parts.append(f"Email: {email}")
+        if any([addr1, addr2, suburb, postcode]):
+            addr = ", ".join([p for p in [addr1, addr2, suburb, postcode] if p])
+            parts.append(f"Address: {addr}")
+        row_map["Message"] = " | ".join(parts)
+
+    # Emit values in the exact order of your sheet’s headers
+    values = [row_map.get(h, "") for h in headers]
+    ws.append_row(values)
+
+
 
 # --- UI ---
 # Heading + logout row
@@ -376,14 +429,24 @@ if st.session_state.member is not None:
             person_name = st.text_input("Name of person", key="upd_name")
             value = st.text_input("New email address", key="upd_email")
     
-        # Submit button (not inside a form, so everything updates live)
-        if st.button("Submit update", type="primary", key="upd_submit"):
-            try:
-                msg = f"{detail_type} update for {person_name}: {value}"
-                append_request(member, "Contact update", msg)
-                st.success("Your contact update has been submitted.")
-            except Exception as e:
-                st.error(f"Could not submit update: {e}")
+            # Submit button
+            if st.button("Submit update", type="primary", key="upd_submit"):
+                try:
+                    if detail_type == "Phone number":
+                        append_contact_update(member, "Phone number", person_name, phone=phone)
+            
+                    elif detail_type == "Email":
+                        append_contact_update(member, "Email", person_name, email=new_email)
+            
+                    elif detail_type == "Address":
+                        append_contact_update(
+                            member, "Address", person_name,
+                            addr1=addr1, addr2=addr2, suburb=suburb, postcode=postcode
+                        )
+            
+                    st.success("Your contact update has been submitted.")
+                except Exception as e:
+                    st.error(f"Could not submit update: {e}")
 
     elif nav == "My requests":
         st.subheader("My leave requests")
