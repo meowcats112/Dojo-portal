@@ -355,36 +355,33 @@ if st.session_state.member is not None:
     elif nav == "Update contact details":
         st.subheader("Update contact details")
     
-        with st.form("contact_update_form"):
-            # Choose what kind of detail to update
-            detail_type = st.selectbox(
-                "Which detail would you like to update?",
-                ["Phone number", "Address", "Email"],
-                key="upd_detail_type"
-            )
+        # Choose detail to update
+        detail_type = st.selectbox(
+            "Which detail would you like to update?",
+            ["Phone number", "Address", "Email"],
+            key="upd_detail_type"
+        )
     
-            # Always ask whose detail this is
-            person_name = st.text_input("Name of person", key="upd_name")
+        # Always ask for whose details
+        person_name = st.text_input("Name of person", key="upd_name")
     
-            # Show the relevant input depending on selection
-            value = ""
-            if detail_type == "Phone number":
-                value = st.text_input("New phone number", key="upd_phone")
-            elif detail_type == "Address":
-                value = st.text_area("New address", key="upd_addr")
-            elif detail_type == "Email":
-                value = st.text_input("New email address", key="upd_email")
+        # Show the relevant field right away (reactive)
+        value = ""
+        if detail_type == "Phone number":
+            value = st.text_input("New phone number", key="upd_phone")
+        elif detail_type == "Address":
+            value = st.text_area("New address", key="upd_addr")
+        elif detail_type == "Email":
+            value = st.text_input("New email address", key="upd_email")
     
-            submitted = st.form_submit_button("Submit update")
-    
-        if submitted:
+        # Submit button (not inside a form, so everything updates live)
+        if st.button("Submit update", type="primary", key="upd_submit"):
             try:
                 msg = f"{detail_type} update for {person_name}: {value}"
                 append_request(member, "Contact update", msg)
                 st.success("Your contact update has been submitted.")
             except Exception as e:
                 st.error(f"Could not submit update: {e}")
-
 
     elif nav == "My requests":
         st.subheader("My leave requests")
