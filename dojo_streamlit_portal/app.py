@@ -559,8 +559,8 @@ if st.session_state.member is not None:
         
                             st.dataframe(view[cols_order], use_container_width=True, hide_index=True)
 
-    except Exception as e:
-        st.error(f"Could not load requests: {e}")
+        except Exception as e:
+            st.error(f"Could not load requests: {e}")
 
 
     elif nav == "Dojo info":
