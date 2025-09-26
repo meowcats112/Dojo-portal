@@ -557,7 +557,6 @@ if st.session_state.member is not None:
                                 view["_ts"] = pd.to_datetime(view["Timestamp"], errors="coerce", dayfirst=True)
                                 view = view.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
         
-                            st.dataframe(view[cols_order], use_container_width=True, hide_index=True)
                             st.data_editor(
                                 view[cols_order],
                                 use_container_width=True,
