@@ -415,8 +415,8 @@ if st.session_state.member is not None:
                         st.session_state.lr_desc = ""
                         st.session_state.lr_reason = "Personal"
                         st.session_state.lr_start_monday = next_monday(_dt.date.today())
-            except Exception as e:
-                st.error(f"Could not submit leave request: {e}")
+                except Exception as e:
+                    st.error(f"Could not submit leave request: {e}")
 
 
     elif nav == "Update contact details":
