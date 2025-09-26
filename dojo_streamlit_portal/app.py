@@ -467,97 +467,97 @@ if st.session_state.member is not None:
                 if "MemberID" in mine.columns:
                     mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
                 
-                if mine.empty:
-                st.info("No requests yet.")
-                
-                else:
-                    # Normalise RequestType for counting / filtering
-                    rt = mine.get("RequestType", "").astype(str).str.strip().str.lower()
-                    is_leave   = rt == "leave request"
-                    is_contact = rt == "contact update"
-                
-                    # ---- Build counts for labels ----
-                    total_leave_all    = int(is_leave.sum())
-                    total_contact_all  = int(is_contact.sum())
-                    total_all_all      = len(mine)
-    
-                    pending_values = {"new","pending","in review","in-progress","submitted"}
-                    status_lower = mine.get("Status","").astype(str).str.strip().str.lower()
-                    total_leave_pending   = int((is_leave   & status_lower.isin(pending_values)).sum())
-                    total_contact_pending = int((is_contact & status_lower.isin(pending_values)).sum())
-                    total_all_pending     = int(status_lower.isin(pending_values).sum())
-
-                
-                    # ---- Category picker (with counts) ----
-                    cat_choice = st.radio(
-                    "    Category",
-                        [
-                            f"Leave requests ({total_leave_pending}/{total_leave_all} pending)",
-                            f"Contact updates ({total_contact_pending}/{total_contact_all} pending)",
-                            f"All ({total_all_pending}/{total_all_all} pending)"
-                        ],
-                        horizontal=True,
-                        key="myreq_category"
-                    )
-
-                
-                    # Apply category filter
-                    view = mine.copy()
-                    if cat_choice.startswith("Leave requests"):
-                        view = view[is_leave]
-                    elif cat_choice.startswith("Contact updates"):
-                        view = view[is_contact]
-                    # else: All → no extra filter
-
-                    # Recompute counts for selected category
-                    status_lower_view = view.get("Status","").astype(str).str.strip().str.lower()
-                    selected_total = len(view)
-                    selected_pending = int(status_lower_view.isin(pending_values).sum())
-
-                    # ---- Pending vs All toggle (with counters) ----
-                    show_choice = st.radio(
-                        "Show",
-                        [f"Pending only ({selected_pending})", f"All ({selected_total})"],
-                        horizontal=True,
-                        key="myreq_filter"
-                    )
-                    if show_choice.startswith("Pending"):
-                        view = view[status_lower_view.isin(pending_values)]
-
-                    # Done filtering?
-                    if view.empty:
-                        st.info("No requests matching this filter.")
+                    if mine.empty:
+                        st.info("No requests yet.")
+                    
                     else:
-                        # ---- Format dates DD-MM-YYYY ----
-                        if "FromDate" in view.columns:
-                            view["FromDate"] = pd.to_datetime(view["FromDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
-                        if "ToDate" in view.columns:
-                            view["ToDate"]   = pd.to_datetime(view["ToDate"],   errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
-                        if "Timestamp" in view.columns:
-                            ts_parsed = pd.to_datetime(view["Timestamp"], errors="coerce", dayfirst=True)
-                            view["Timestamp"] = ts_parsed.dt.strftime("%d-%m-%Y %H:%M")
-
-                        # ---- Choose columns based on category ----
-                        prefer_leave = [c for c in ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"] if c in view.columns]
-                        prefer_contact = [c for c in ["Timestamp","UpdateType","UpdateName","UpdatePhone","UpdateEmail","Addr1","Addr2","Suburb","PostCode","Status","AdminNotes"] if c in view.columns]
-                        fallback = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in view.columns]
+                        # Normalise RequestType for counting / filtering
+                        rt = mine.get("RequestType", "").astype(str).str.strip().str.lower()
+                        is_leave   = rt == "leave request"
+                        is_contact = rt == "contact update"
+                    
+                        # ---- Build counts for labels ----
+                        total_leave_all    = int(is_leave.sum())
+                        total_contact_all  = int(is_contact.sum())
+                        total_all_all      = len(mine)
+        
+                        pending_values = {"new","pending","in review","in-progress","submitted"}
+                        status_lower = mine.get("Status","").astype(str).str.strip().str.lower()
+                        total_leave_pending   = int((is_leave   & status_lower.isin(pending_values)).sum())
+                        total_contact_pending = int((is_contact & status_lower.isin(pending_values)).sum())
+                        total_all_pending     = int(status_lower.isin(pending_values).sum())
     
-                        if cat_choice.startswith("Leave requests") and prefer_leave:
-                            cols_order = prefer_leave
-                        elif cat_choice.startswith("Contact updates") and prefer_contact:
-                            cols_order = prefer_contact
+                    
+                        # ---- Category picker (with counts) ----
+                        cat_choice = st.radio(
+                        "    Category",
+                            [
+                                f"Leave requests ({total_leave_pending}/{total_leave_all} pending)",
+                                f"Contact updates ({total_contact_pending}/{total_contact_all} pending)",
+                                f"All ({total_all_pending}/{total_all_all} pending)"
+                            ],
+                            horizontal=True,
+                            key="myreq_category"
+                        )
+    
+                    
+                        # Apply category filter
+                        view = mine.copy()
+                        if cat_choice.startswith("Leave requests"):
+                            view = view[is_leave]
+                        elif cat_choice.startswith("Contact updates"):
+                            view = view[is_contact]
+                        # else: All → no extra filter
+    
+                        # Recompute counts for selected category
+                        status_lower_view = view.get("Status","").astype(str).str.strip().str.lower()
+                        selected_total = len(view)
+                        selected_pending = int(status_lower_view.isin(pending_values).sum())
+    
+                        # ---- Pending vs All toggle (with counters) ----
+                        show_choice = st.radio(
+                            "Show",
+                            [f"Pending only ({selected_pending})", f"All ({selected_total})"],
+                            horizontal=True,
+                            key="myreq_filter"
+                        )
+                        if show_choice.startswith("Pending"):
+                            view = view[status_lower_view.isin(pending_values)]
+    
+                        # Done filtering?
+                        if view.empty:
+                            st.info("No requests matching this filter.")
                         else:
-                            # "All" or when structured columns aren't present
-                            # Use a union that keeps things readable
-                            cols_union = prefer_leave + [c for c in prefer_contact if c not in prefer_leave]
-                            cols_order = cols_union if cols_union else fallback
+                            # ---- Format dates DD-MM-YYYY ----
+                            if "FromDate" in view.columns:
+                                view["FromDate"] = pd.to_datetime(view["FromDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                            if "ToDate" in view.columns:
+                                view["ToDate"]   = pd.to_datetime(view["ToDate"],   errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                            if "Timestamp" in view.columns:
+                                ts_parsed = pd.to_datetime(view["Timestamp"], errors="coerce", dayfirst=True)
+                                view["Timestamp"] = ts_parsed.dt.strftime("%d-%m-%Y %H:%M")
     
-                        # ---- Sort newest first if we have Timestamp ----
-                        if "Timestamp" in view.columns:
-                            view["_ts"] = pd.to_datetime(view["Timestamp"], errors="coerce", dayfirst=True)
-                            view = view.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
-    
-                        st.dataframe(view[cols_order], use_container_width=True, hide_index=True)
+                            # ---- Choose columns based on category ----
+                            prefer_leave = [c for c in ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"] if c in view.columns]
+                            prefer_contact = [c for c in ["Timestamp","UpdateType","UpdateName","UpdatePhone","UpdateEmail","Addr1","Addr2","Suburb","PostCode","Status","AdminNotes"] if c in view.columns]
+                            fallback = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in view.columns]
+        
+                            if cat_choice.startswith("Leave requests") and prefer_leave:
+                                cols_order = prefer_leave
+                            elif cat_choice.startswith("Contact updates") and prefer_contact:
+                                cols_order = prefer_contact
+                            else:
+                                # "All" or when structured columns aren't present
+                                # Use a union that keeps things readable
+                                cols_union = prefer_leave + [c for c in prefer_contact if c not in prefer_leave]
+                                cols_order = cols_union if cols_union else fallback
+        
+                            # ---- Sort newest first if we have Timestamp ----
+                            if "Timestamp" in view.columns:
+                                view["_ts"] = pd.to_datetime(view["Timestamp"], errors="coerce", dayfirst=True)
+                                view = view.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
+        
+                            st.dataframe(view[cols_order], use_container_width=True, hide_index=True)
 
     except Exception as e:
         st.error(f"Could not load requests: {e}")
