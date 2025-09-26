@@ -558,6 +558,19 @@ if st.session_state.member is not None:
                                 view = view.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
         
                             st.dataframe(view[cols_order], use_container_width=True, hide_index=True)
+                            st.data_editor(
+                                view[cols_order],
+                                use_container_width=True,
+                                hide_index=True,
+                                disabled=True,  # makes it read-only
+                                column_config={
+                                    "Addr1": st.column_config.Column("Address Line 1", width="large"),
+                                    "Addr2": st.column_config.Column("Address Line 2", width="large"),
+                                    "Suburb": st.column_config.Column("Suburb", width="medium"),
+                                    "PostCode": st.column_config.Column("Post Code", width="small"),
+                                }
+                            )
+
 
         except Exception as e:
             st.error(f"Could not load requests: {e}")
