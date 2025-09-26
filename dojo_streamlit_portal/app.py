@@ -355,68 +355,68 @@ if st.session_state.member is not None:
         end_date = snapped_start + _dt.timedelta(days=7 * int(weeks) - 1)
         st.caption(f"Requested period: **{snapped_start.strftime('%d-%m-%Y')} → {end_date.strftime('%d-%m-%Y')}** ({int(weeks)} week(s))")
     
-        if st.button("Submit leave request", type="primary", key="lr_submit"):
-                # --- Required field checks ---
-            if not snapped_start:
-                st.error("Please select a start date.")
-            elif not weeks or weeks < 1:
-                st.error("Please enter at least 1 week.")
-            elif not reason:
-                st.error("Please select a leave reason.")
-            elif not description or not description.strip():
-                st.error("Please enter a short description for your leave request.")
-            else:
-                try:
-                    # --- Overlap validation: check existing leave requests for this member ---
-                    gc = get_gsheets_client()
-                    r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
-                    r_df = pd.DataFrame(r_ws.get_all_records())
-            
-                    overlap_found = False
-                    conflict_rows = pd.DataFrame()
-            
-                    if not r_df.empty:
-                        mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
-                        if "MemberID" in mine.columns:
-                            mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
-                            if not mine.empty:
-                                # Only leave requests
-                                if "RequestType" in mine.columns:
-                                    mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
-            
-                        # Try parse FromDate/ToDate (DD-MM-YYYY or other); fall back to message parsing if needed
-                        if "FromDate" in mine.columns and "ToDate" in mine.columns:
-                            start_new = snapped_start
-                            end_new = end_date
-        
-                            # Parse with dayfirst for DD-MM-YYYY
-                            mine["_from"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True)
-                            mine["_to"]   = pd.to_datetime(mine["ToDate"],   errors="coerce", dayfirst=True)
-        
-                            # Any overlap if: existing_from <= new_end AND existing_to >= new_start
-                            conflict_mask = (mine["_from"].notna() & mine["_to"].notna() &
-                                             (mine["_from"].dt.date <= end_new) &
-                                             (mine["_to"].dt.date   >= start_new))
-                            conflict_rows = mine[conflict_mask]
-                            overlap_found = not conflict_rows.empty
-            
-                    if overlap_found:
-                        # Show conflicts with friendly dates
-                        show = conflict_rows.copy()
-                        show["FromDate"] = pd.to_datetime(show["_from"]).dt.strftime("%d-%m-%Y")
-                        show["ToDate"]   = pd.to_datetime(show["_to"]).dt.strftime("%d-%m-%Y")
-                        st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
-                        st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
-                                     use_container_width=True, hide_index=True)
+            if st.button("Submit leave request", type="primary", key="lr_submit"):
+                    # --- Required field checks ---
+                if not snapped_start:
+                    st.error("Please select a start date.")
+                elif not weeks or weeks < 1:
+                    st.error("Please enter at least 1 week.")
+                elif not reason:
+                    st.error("Please select a leave reason.")
+                elif not description or not description.strip():
+                    st.error("Please enter a short description for your leave request.")
+                else:
                     try:
-                        append_leave_request(member, snapped_start, int(weeks), reason, description)
-                        st.success("Leave request submitted. We’ll review it soon.")
-                        st.session_state.lr_weeks = 1
-                        st.session_state.lr_desc = ""
-                        st.session_state.lr_reason = "Personal"
-                        st.session_state.lr_start_monday = next_monday(_dt.date.today())
-                except Exception as e:
-                    st.error(f"Could not submit leave request: {e}")
+                        # --- Overlap validation: check existing leave requests for this member ---
+                        gc = get_gsheets_client()
+                        r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+                        r_df = pd.DataFrame(r_ws.get_all_records())
+                
+                        overlap_found = False
+                        conflict_rows = pd.DataFrame()
+                
+                        if not r_df.empty:
+                            mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+                            if "MemberID" in mine.columns:
+                                mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
+                                if not mine.empty:
+                                    # Only leave requests
+                                    if "RequestType" in mine.columns:
+                                        mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
+                
+                            # Try parse FromDate/ToDate (DD-MM-YYYY or other); fall back to message parsing if needed
+                            if "FromDate" in mine.columns and "ToDate" in mine.columns:
+                                start_new = snapped_start
+                                end_new = end_date
+            
+                                # Parse with dayfirst for DD-MM-YYYY
+                                mine["_from"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True)
+                                mine["_to"]   = pd.to_datetime(mine["ToDate"],   errors="coerce", dayfirst=True)
+            
+                                # Any overlap if: existing_from <= new_end AND existing_to >= new_start
+                                conflict_mask = (mine["_from"].notna() & mine["_to"].notna() &
+                                                 (mine["_from"].dt.date <= end_new) &
+                                                 (mine["_to"].dt.date   >= start_new))
+                                conflict_rows = mine[conflict_mask]
+                                overlap_found = not conflict_rows.empty
+                
+                        if overlap_found:
+                            # Show conflicts with friendly dates
+                            show = conflict_rows.copy()
+                            show["FromDate"] = pd.to_datetime(show["_from"]).dt.strftime("%d-%m-%Y")
+                            show["ToDate"]   = pd.to_datetime(show["_to"]).dt.strftime("%d-%m-%Y")
+                            st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
+                            st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
+                                         use_container_width=True, hide_index=True)
+                        try:
+                            append_leave_request(member, snapped_start, int(weeks), reason, description)
+                            st.success("Leave request submitted. We’ll review it soon.")
+                            st.session_state.lr_weeks = 1
+                            st.session_state.lr_desc = ""
+                            st.session_state.lr_reason = "Personal"
+                            st.session_state.lr_start_monday = next_monday(_dt.date.today())
+                    except Exception as e:
+                        st.error(f"Could not submit leave request: {e}")
 
 
     elif nav == "Update contact details":
