@@ -459,11 +459,6 @@ if st.session_state.member is not None:
             if r_df.empty:
                 st.info("No requests yet.")
             else:
-                # Filter to this member (email + MemberID)
-                mine = r_df[
-                    r_df.get("MemberEmail", "").astype(str).str.strip().str.lower()
-                    == str(email).strip().lower()
-                ]
                 
                 # Filter to this member (email + MemberID)
                 mine = r_df[
@@ -472,65 +467,100 @@ if st.session_state.member is not None:
                 if "MemberID" in mine.columns:
                     mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
                 
-                # Keep only leave requests if column exists
-                if "RequestType" in mine.columns:
-                    mine = mine[mine["RequestType"].astype(str).str.strip().str.lower() == "leave request"]
-                
-                total_count = len(mine)
-                pending_values = {"new", "pending", "in review", "in-progress", "submitted"}
-                pending_count = 0
-                if "Status" in mine.columns and not mine.empty:
-                    status_lower = mine["Status"].astype(str).str.strip().str.lower()
-                    pending_count = status_lower.isin(pending_values).sum()
-                
-                # Toggle with counters
-                show_choice = st.radio(
-                    "Show",
-                    [f"Pending only ({pending_count})", f"All ({total_count})"],
-                    horizontal=True,
-                    key="myreq_filter"
-                )
-                
-                # Apply filter based on selection
-                if "Status" in mine.columns and show_choice.startswith("Pending"):
-                    status_lower = mine["Status"].astype(str).str.strip().str.lower()
-                    mine = mine[status_lower.isin(pending_values)]
-
-    
                 if mine.empty:
-                    st.info("No requests matching this filter.")
+                st.info("No requests yet.")
+                
                 else:
-                    # Format dates in DD-MM-YYYY
-                    if "FromDate" in mine.columns:
-                        mine["FromDate"] = pd.to_datetime(
-                            mine["FromDate"], errors="coerce", dayfirst=True
-                        ).dt.strftime("%d-%m-%Y")
-                    if "ToDate" in mine.columns:
-                        mine["ToDate"] = pd.to_datetime(
-                            mine["ToDate"], errors="coerce", dayfirst=True
-                        ).dt.strftime("%d-%m-%Y")
-                    if "Timestamp" in mine.columns:
-                        ts_parsed = pd.to_datetime(
-                            mine["Timestamp"], errors="coerce", dayfirst=True
-                        )
-                        mine["Timestamp"] = ts_parsed.dt.strftime("%d-%m-%Y %H:%M")
+                    # Normalise RequestType for counting / filtering
+                    rt = mine.get("RequestType", "").astype(str).str.strip().str.lower()
+                    is_leave   = rt == "leave request"
+                    is_contact = rt == "contact update"
+                
+                    # ---- Build counts for labels ----
+                    total_leave_all    = int(is_leave.sum())
+                    total_contact_all  = int(is_contact.sum())
+                    total_all_all      = len(mine)
     
-                    # Choose display columns
-                    cols_order = [c for c in
-                                  ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"]
-                                  if c in mine.columns]
-                    if not cols_order:
-                        cols_order = [c for c in ["Timestamp","Message","Status","AdminNotes"] if c in mine.columns]
+                    pending_values = {"new","pending","in review","in-progress","submitted"}
+                    status_lower = mine.get("Status","").astype(str).str.strip().str.lower()
+                    total_leave_pending   = int((is_leave   & status_lower.isin(pending_values)).sum())
+                    total_contact_pending = int((is_contact & status_lower.isin(pending_values)).sum())
+                    total_all_pending     = int(status_lower.isin(pending_values).sum())
+
+                
+                    # ---- Category picker (with counts) ----
+                    cat_choice = st.radio(
+                    "    Category",
+                        [
+                            f"Leave requests ({total_leave_pending}/{total_leave_all} pending)",
+                            f"Contact updates ({total_contact_pending}/{total_contact_all} pending)",
+                            f"All ({total_all_pending}/{total_all_all} pending)"
+                        ],
+                        horizontal=True,
+                        key="myreq_category"
+                    )
+
+                
+                    # Apply category filter
+                    view = mine.copy()
+                    if cat_choice.startswith("Leave requests"):
+                        view = view[is_leave]
+                    elif cat_choice.startswith("Contact updates"):
+                        view = view[is_contact]
+                    # else: All → no extra filter
+
+                    # Recompute counts for selected category
+                    status_lower_view = view.get("Status","").astype(str).str.strip().str.lower()
+                    selected_total = len(view)
+                    selected_pending = int(status_lower_view.isin(pending_values).sum())
+
+                    # ---- Pending vs All toggle (with counters) ----
+                    show_choice = st.radio(
+                        "Show",
+                        [f"Pending only ({selected_pending})", f"All ({selected_total})"],
+                        horizontal=True,
+                        key="myreq_filter"
+                    )
+                    if show_choice.startswith("Pending"):
+                        view = view[status_lower_view.isin(pending_values)]
+
+                    # Done filtering?
+                    if view.empty:
+                        st.info("No requests matching this filter.")
+                    else:
+                        # ---- Format dates DD-MM-YYYY ----
+                        if "FromDate" in view.columns:
+                            view["FromDate"] = pd.to_datetime(view["FromDate"], errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                        if "ToDate" in view.columns:
+                            view["ToDate"]   = pd.to_datetime(view["ToDate"],   errors="coerce", dayfirst=True).dt.strftime("%d-%m-%Y")
+                        if "Timestamp" in view.columns:
+                            ts_parsed = pd.to_datetime(view["Timestamp"], errors="coerce", dayfirst=True)
+                            view["Timestamp"] = ts_parsed.dt.strftime("%d-%m-%Y %H:%M")
+
+                        # ---- Choose columns based on category ----
+                        prefer_leave = [c for c in ["Timestamp","FromDate","ToDate","Weeks","LeaveReason","LeaveDescription","Status","AdminNotes"] if c in view.columns]
+                        prefer_contact = [c for c in ["Timestamp","UpdateType","UpdateName","UpdatePhone","UpdateEmail","Addr1","Addr2","Suburb","PostCode","Status","AdminNotes"] if c in view.columns]
+                        fallback = [c for c in ["Timestamp","RequestType","Message","Status","AdminNotes"] if c in view.columns]
     
-                    # Sort newest first
-                    if "Timestamp" in mine.columns:
-                        mine["_ts"] = pd.to_datetime(mine["Timestamp"], errors="coerce", dayfirst=True)
-                        mine = mine.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
+                        if cat_choice.startswith("Leave requests") and prefer_leave:
+                            cols_order = prefer_leave
+                        elif cat_choice.startswith("Contact updates") and prefer_contact:
+                            cols_order = prefer_contact
+                        else:
+                            # "All" or when structured columns aren't present
+                            # Use a union that keeps things readable
+                            cols_union = prefer_leave + [c for c in prefer_contact if c not in prefer_leave]
+                            cols_order = cols_union if cols_union else fallback
     
-                    st.dataframe(mine[cols_order], use_container_width=True, hide_index=True)
+                        # ---- Sort newest first if we have Timestamp ----
+                        if "Timestamp" in view.columns:
+                            view["_ts"] = pd.to_datetime(view["Timestamp"], errors="coerce", dayfirst=True)
+                            view = view.sort_values("_ts", ascending=False).drop(columns=["_ts"], errors="ignore")
     
-        except Exception as e:
-            st.error(f"Could not load requests: {e}")
+                        st.dataframe(view[cols_order], use_container_width=True, hide_index=True)
+
+    except Exception as e:
+        st.error(f"Could not load requests: {e}")
 
 
     elif nav == "Dojo info":
