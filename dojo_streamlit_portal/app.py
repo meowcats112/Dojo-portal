@@ -398,7 +398,7 @@ if st.session_state.member is not None:
                                              (mine["_from"].dt.date <= end_new) &
                                              (mine["_to"].dt.date   >= start_new))
                             conflict_rows = mine[conflict_mask]
-                                overlap_found = not conflict_rows.empty
+                            overlap_found = not conflict_rows.empty
             
                     if overlap_found:
                         # Show conflicts with friendly dates
