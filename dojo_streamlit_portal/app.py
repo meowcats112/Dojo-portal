@@ -279,15 +279,15 @@ if st.session_state.member is not None:
         # Card layout with metrics
         c1, c2, c3 = st.columns([1,1,1])
         with c1:
-            st.markdown("<div class='card'><div class='title'>Allowance</div>", unsafe_allow_html=True)
+            st.markdown("<div class='card'><div class='title'>Allowance (Weeks)</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(allow) if isinstance(allow, float) and allow.is_integer() else allow}")
             st.markdown("</div>", unsafe_allow_html=True)
         with c2:
-            st.markdown("<div class='card'><div class='title'>Taken</div>", unsafe_allow_html=True)
+            st.markdown("<div class='card'><div class='title'>Taken (Weeks)</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(taken) if isinstance(taken, float) and taken.is_integer() else taken}")
             st.markdown("</div>", unsafe_allow_html=True)
         with c3:
-            st.markdown("<div class='card'><div class='title'>Balance</div>", unsafe_allow_html=True)
+            st.markdown("<div class='card'><div class='title'>Remaining</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(bal) if isinstance(bal, float) and bal.is_integer() else bal}")
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -331,16 +331,19 @@ if st.session_state.member is not None:
     
         reason = st.selectbox(
             "Leave reason",
-            ["Personal", "Injury or Serious Illness"],
+            ["", "Personal", "Injury or Serious Illness"],
             key="lr_reason"
         )
+
+        if not reason:
+            st.info("⚠️ Please select a leave reason before submitting.")
 
         if reason == "Injury or Serious Illness":
             st.warning("A medical certificate stating nature of injury/illness and recovery time is required.  \nPlease send through to admin@example.com")
 
     
         description = st.text_input(
-            "Short description (optional)",
+            "Short description",
             max_chars=120,
             key="lr_desc"
         )
@@ -353,54 +356,65 @@ if st.session_state.member is not None:
         st.caption(f"Requested period: **{snapped_start.strftime('%d-%m-%Y')} → {end_date.strftime('%d-%m-%Y')}** ({int(weeks)} week(s))")
     
         if st.button("Submit leave request", type="primary", key="lr_submit"):
-             # --- Overlap validation: check existing leave requests for this member ---
-            gc = get_gsheets_client()
-            r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
-            r_df = pd.DataFrame(r_ws.get_all_records())
-    
-            overlap_found = False
-            conflict_rows = pd.DataFrame()
-    
-            if not r_df.empty:
-                mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
-                if "MemberID" in mine.columns:
-                    mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
-                    if not mine.empty:
-                        # Only leave requests
-                        if "RequestType" in mine.columns:
-                            mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
-    
-                    # Try parse FromDate/ToDate (DD-MM-YYYY or other); fall back to message parsing if needed
-                    if "FromDate" in mine.columns and "ToDate" in mine.columns:
-                        start_new = snapped_start
-                        end_new = end_date
-    
-                        # Parse with dayfirst for DD-MM-YYYY
-                        mine["_from"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True)
-                        mine["_to"]   = pd.to_datetime(mine["ToDate"],   errors="coerce", dayfirst=True)
-    
-                        # Any overlap if: existing_from <= new_end AND existing_to >= new_start
-                        conflict_mask = (mine["_from"].notna() & mine["_to"].notna() &
-                                         (mine["_from"].dt.date <= end_new) &
-                                         (mine["_to"].dt.date   >= start_new))
-                        conflict_rows = mine[conflict_mask]
-                        overlap_found = not conflict_rows.empty
-    
-            if overlap_found:
-                # Show conflicts with friendly dates
-                show = conflict_rows.copy()
-                show["FromDate"] = pd.to_datetime(show["_from"]).dt.strftime("%d-%m-%Y")
-                show["ToDate"]   = pd.to_datetime(show["_to"]).dt.strftime("%d-%m-%Y")
-                st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
-                st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
-                             use_container_width=True, hide_index=True)
-            try:
-                append_leave_request(member, snapped_start, int(weeks), reason, description)
-                st.success("Leave request submitted. We’ll review it soon.")
-                st.session_state.lr_weeks = 1
-                st.session_state.lr_desc = ""
-                st.session_state.lr_reason = "Personal"
-                st.session_state.lr_start_monday = next_monday(_dt.date.today())
+                # --- Required field checks ---
+            if not snapped_start:
+                st.error("Please select a start date.")
+            elif not weeks or weeks < 1:
+                st.error("Please enter at least 1 week.")
+            elif not reason:
+                st.error("Please select a leave reason.")
+            elif not description or not description.strip():
+                st.error("Please enter a short description for your leave request.")
+            else:
+                try:
+                    # --- Overlap validation: check existing leave requests for this member ---
+                    gc = get_gsheets_client()
+                    r_ws = gc.open_by_key(st.secrets["sheets"]["requests_sheet_key"]).sheet1
+                    r_df = pd.DataFrame(r_ws.get_all_records())
+            
+                    overlap_found = False
+                    conflict_rows = pd.DataFrame()
+            
+                    if not r_df.empty:
+                        mine = r_df[r_df["MemberEmail"].str.strip().str.lower() == str(email).strip().lower()]
+                        if "MemberID" in mine.columns:
+                            mine = mine[mine["MemberID"].astype(str).str.strip().str.lower() == str(member.get("MemberID","")).strip().lower()]
+                            if not mine.empty:
+                                # Only leave requests
+                                if "RequestType" in mine.columns:
+                                    mine = mine[mine["RequestType"].str.strip().str.lower() == "leave request"]
+            
+                        # Try parse FromDate/ToDate (DD-MM-YYYY or other); fall back to message parsing if needed
+                        if "FromDate" in mine.columns and "ToDate" in mine.columns:
+                            start_new = snapped_start
+                            end_new = end_date
+        
+                            # Parse with dayfirst for DD-MM-YYYY
+                            mine["_from"] = pd.to_datetime(mine["FromDate"], errors="coerce", dayfirst=True)
+                            mine["_to"]   = pd.to_datetime(mine["ToDate"],   errors="coerce", dayfirst=True)
+        
+                            # Any overlap if: existing_from <= new_end AND existing_to >= new_start
+                            conflict_mask = (mine["_from"].notna() & mine["_to"].notna() &
+                                             (mine["_from"].dt.date <= end_new) &
+                                             (mine["_to"].dt.date   >= start_new))
+                            conflict_rows = mine[conflict_mask]
+                                overlap_found = not conflict_rows.empty
+            
+                    if overlap_found:
+                        # Show conflicts with friendly dates
+                        show = conflict_rows.copy()
+                        show["FromDate"] = pd.to_datetime(show["_from"]).dt.strftime("%d-%m-%Y")
+                        show["ToDate"]   = pd.to_datetime(show["_to"]).dt.strftime("%d-%m-%Y")
+                        st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
+                        st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
+                                     use_container_width=True, hide_index=True)
+                    try:
+                        append_leave_request(member, snapped_start, int(weeks), reason, description)
+                        st.success("Leave request submitted. We’ll review it soon.")
+                        st.session_state.lr_weeks = 1
+                        st.session_state.lr_desc = ""
+                        st.session_state.lr_reason = "Personal"
+                        st.session_state.lr_start_monday = next_monday(_dt.date.today())
             except Exception as e:
                 st.error(f"Could not submit leave request: {e}")
 
@@ -429,22 +443,33 @@ if st.session_state.member is not None:
             person_name = st.text_input("Name of person", key="upd_name")
             value = st.text_input("New email address", key="upd_email")
     
+    
             # Submit button
             if st.button("Submit update", type="primary", key="upd_submit"):
                 try:
                     if detail_type == "Phone number":
-                        append_contact_update(member, "Phone number", person_name, phone=phone)
-            
+                        import re
+                        raw = phone  # from st.text_input above
+                        digits = re.sub(r"\D", "", raw)  # keep only numbers
+        
+                        if len(digits) == 10 and digits.startswith("0"):
+                            formatted = f"{digits[0:4]} {digits[4:7]} {digits[7:10]}"  # 0400 123 456
+                            append_contact_update(member, "Phone number", person_name, phone=formatted)
+                            st.success(f"Your contact update has been submitted: {formatted}")
+                        else:
+                            st.error("Please enter a valid 10-digit mobile (e.g. 0400 123 456).")
+        
                     elif detail_type == "Email":
                         append_contact_update(member, "Email", person_name, email=new_email)
-            
+                        st.success("Your contact update has been submitted.")
+        
                     elif detail_type == "Address":
                         append_contact_update(
                             member, "Address", person_name,
                             addr1=addr1, addr2=addr2, suburb=suburb, postcode=postcode
                         )
-            
-                    st.success("Your contact update has been submitted.")
+                        st.success("Your contact update has been submitted.")
+        
                 except Exception as e:
                     st.error(f"Could not submit update: {e}")
 
