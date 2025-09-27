@@ -276,10 +276,12 @@ if st.session_state.member is not None:
 
     if nav == "My balance":
 
+        st.info("Leave per calendar year")
+
         # Card layout with metrics
         c1, c2, c3 = st.columns([1,1,1])
         with c1:
-            st.markdown("<div class='card'><div class='title'>Allowance</div>", unsafe_allow_html=True)
+            st.markdown("<div class='card'><div class='title'>Total</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(allow) if isinstance(allow, float) and allow.is_integer() else allow}")
             st.caption("week(s)")
             st.markdown("</div>", unsafe_allow_html=True)
