@@ -276,6 +276,7 @@ if st.session_state.member is not None:
 
     if nav == "My balance":
 
+        st.info("Leave per calendar year")
 
         # Card layout with metrics
         c1, c2, c3 = st.columns([1,1,1])
@@ -328,7 +329,6 @@ if st.session_state.member is not None:
             f"<div class='muted'>You have {bal:.0f} weeks remaining out of {allow:.0f} total.</div>",
             unsafe_allow_html=True
         )
-        st.info("Leave per calendar year")
 
         st.write("")  # spacer
         st.write("")  # spacer
@@ -548,7 +548,7 @@ if st.session_state.member is not None:
                     
                         # ---- Category picker (with counts) ----
                         cat_choice = st.radio(
-                        "    Category",
+                        "Category",
                             [
                                 f"Leave requests ({total_leave_pending}/{total_leave_all} pending)",
                                 f"Contact updates ({total_contact_pending}/{total_contact_all} pending)",
@@ -575,7 +575,7 @@ if st.session_state.member is not None:
                         # ---- Pending vs All toggle (with counters) ----
                         show_choice = st.radio(
                             "Show",
-                            [f"Pending only ({selected_pending})", f"All ({selected_total})"],
+                            [f"Pending ({selected_pending})", f"All ({selected_total})"],
                             horizontal=True,
                             key="myreq_filter"
                         )
