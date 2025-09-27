@@ -284,7 +284,7 @@ if st.session_state.member is not None:
             st.caption("week(s)")
             st.markdown("</div>", unsafe_allow_html=True)
         with c2:
-            st.markdown("<div class='card'><div class='title'>Taken (Weeks)</div>", unsafe_allow_html=True)
+            st.markdown("<div class='card'><div class='title'>Taken</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(taken) if isinstance(taken, float) and taken.is_integer() else taken}")
             st.caption("week(s)")
             st.markdown("</div>", unsafe_allow_html=True)
@@ -295,10 +295,39 @@ if st.session_state.member is not None:
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.write("")
-        used_pct = pct(taken, allow)
-        st.markdown("**Usage**")
-        st.progress(int(used_pct), text=f"{used_pct:.0f}% of allowance used")
-        st.markdown(f"<div class='muted'>You have {bal:.0f} remaining out of {allow:.0f}.</div>", unsafe_allow_html=True)
+
+        # --- Calculate free vs paid usage ---
+        free_allowance = 4
+        paid_allowance = max(0, allow - free_allowance)
+        
+        free_used = min(taken, free_allowance)
+        paid_used = max(0, taken - free_allowance)
+        
+        free_used_pct = (free_used / allow) * 100 if allow > 0 else 0
+        paid_used_pct = (paid_used / allow) * 100 if allow > 0 else 0
+        
+        # --- Custom progress bar ---
+        st.markdown("**Usage**", unsafe_allow_html=True)
+        
+        bar_html = f"""
+        <div style="background-color:#e0e0e0;border-radius:10px;height:24px;width:100%;overflow:hidden;display:flex">
+          <div style="background-color:#4CAF50;width:{free_used_pct}%;"></div>
+          <div style="background-color:#FF9800;width:{paid_used_pct}%;"></div>
+        </div>
+        <p style="font-size:0.85em;margin-top:4px">
+          <span style="color:#4CAF50">■</span> Free weeks used: {free_used} / {free_allowance} &nbsp; 
+          <span style="color:#FF9800">■</span> Paid weeks used: {paid_used} / {paid_allowance}
+        </p>
+        """
+        
+        st.markdown(bar_html, unsafe_allow_html=True)
+        
+        # --- Summary line ---
+        st.markdown(
+            f"<div class='muted'>You have {bal:.0f} weeks remaining out of {allow:.0f} total.</div>",
+            unsafe_allow_html=True
+        )
+
 
         st.write("")  # spacer
         st.write("")  # spacer
