@@ -408,7 +408,7 @@ if st.session_state.member is not None:
                         st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
                         st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
                                      use_container_width=True, hide_index=True)
-                    try:
+                    
                         append_leave_request(member, snapped_start, int(weeks), reason, description)
                         st.success("Leave request submitted. We’ll review it soon.")
                         st.session_state.lr_weeks = 1
