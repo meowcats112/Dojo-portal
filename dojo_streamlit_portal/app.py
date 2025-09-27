@@ -400,21 +400,21 @@ if st.session_state.member is not None:
                             conflict_rows = mine[conflict_mask]
                             overlap_found = not conflict_rows.empty
             
-                if overlap_found:
-                    # Show conflicts with friendly dates
-                    show = conflict_rows.copy()
-                    show["FromDate"] = pd.to_datetime(show["_from"]).dt.strftime("%d-%m-%Y")
-                    show["ToDate"]   = pd.to_datetime(show["_to"]).dt.strftime("%d-%m-%Y")
-                    st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
-                    st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
-                                 use_container_width=True, hide_index=True)
-                try:
-                    append_leave_request(member, snapped_start, int(weeks), reason, description)
-                    st.success("Leave request submitted. We’ll review it soon.")
-                    st.session_state.lr_weeks = 1
-                    st.session_state.lr_desc = ""
-                    st.session_state.lr_reason = "Personal"
-                    st.session_state.lr_start_monday = next_monday(_dt.date.today())
+                    if overlap_found:
+                        # Show conflicts with friendly dates
+                        show = conflict_rows.copy()
+                        show["FromDate"] = pd.to_datetime(show["_from"]).dt.strftime("%d-%m-%Y")
+                        show["ToDate"]   = pd.to_datetime(show["_to"]).dt.strftime("%d-%m-%Y")
+                        st.error("This period overlaps an existing leave request. Please choose a different Monday or weeks.")
+                        st.dataframe(show[["FromDate", "ToDate", "Weeks", "Status"]] if "Weeks" in show.columns else show[["FromDate","ToDate","Status"]],
+                                     use_container_width=True, hide_index=True)
+                    try:
+                        append_leave_request(member, snapped_start, int(weeks), reason, description)
+                        st.success("Leave request submitted. We’ll review it soon.")
+                        st.session_state.lr_weeks = 1
+                        st.session_state.lr_desc = ""
+                        st.session_state.lr_reason = "Personal"
+                        st.session_state.lr_start_monday = next_monday(_dt.date.today())
             except Exception as e:
                 st.error(f"Could not submit leave request: {e}")
 
