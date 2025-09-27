@@ -315,8 +315,8 @@ if st.session_state.member is not None:
           <div style="background-color:#FF9800;width:{paid_used_pct}%;"></div>
         </div>
         <p style="font-size:0.85em;margin-top:4px">
-          <span style="color:#4CAF50">■</span> Free weeks used: {free_used} / {free_allowance} &nbsp; 
-          <span style="color:#FF9800">■</span> Paid weeks used: {paid_used} / {paid_allowance}
+          <span style="color:#4CAF50">■</span> Free weeks used: {int(free_used)} / {int(free_allowance)} &nbsp; 
+          <span style="color:#FF9800">■</span> Paid weeks used: {int(paid_used)} / {int(paid_allowance)}
         </p>
         """
         
