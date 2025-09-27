@@ -281,17 +281,17 @@ if st.session_state.member is not None:
         with c1:
             st.markdown("<div class='card'><div class='title'>Allowance</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(allow) if isinstance(allow, float) and allow.is_integer() else allow}")
-            st.caption("week(s))
+            st.caption("week(s)")
             st.markdown("</div>", unsafe_allow_html=True)
         with c2:
             st.markdown("<div class='card'><div class='title'>Taken (Weeks)</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(taken) if isinstance(taken, float) and taken.is_integer() else taken}")
-            st.caption("week(s))
+            st.caption("week(s)")
             st.markdown("</div>", unsafe_allow_html=True)
         with c3:
             st.markdown("<div class='card'><div class='title'>Remaining</div>", unsafe_allow_html=True)
             st.metric(label="", value=f"{int(bal) if isinstance(bal, float) and bal.is_integer() else bal}")
-            st.caption("week(s))
+            st.caption("week(s)")
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.write("")
