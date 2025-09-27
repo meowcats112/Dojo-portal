@@ -276,7 +276,6 @@ if st.session_state.member is not None:
 
     if nav == "My balance":
 
-        st.info("Leave per calendar year")
 
         # Card layout with metrics
         c1, c2, c3 = st.columns([1,1,1])
@@ -329,7 +328,7 @@ if st.session_state.member is not None:
             f"<div class='muted'>You have {bal:.0f} weeks remaining out of {allow:.0f} total.</div>",
             unsafe_allow_html=True
         )
-
+        st.info("Leave per calendar year")
 
         st.write("")  # spacer
         st.write("")  # spacer
