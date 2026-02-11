@@ -637,7 +637,7 @@ if st.session_state.member is not None:
         st.subheader("Dojo info")
         st.markdown("""
 - **Timetable:** See our latest class times on the noticeboard or website.
-- **Leave policy:** For more infomation on the Membership Suspension Policy, please refer to the [Membership Terms & Conditions](https://drive.google.com/file/d/1xdl9QdPZ7A8u20MnLsWNOmN1rqbF0qE4/view)
+- **Leave policy:** For more on our Membership Suspension Policy, please refer to the [Terms & Conditions](https://drive.google.com/file/d/1xdl9QdPZ7A8u20MnLsWNOmN1rqbF0qE4/view)
 - **Contact:** skwaverley@gmail.com · 0483 956 262
         """)
 
