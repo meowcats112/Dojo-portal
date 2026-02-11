@@ -340,7 +340,7 @@ if st.session_state.member is not None:
 
         # --- Reminder about dojo policy ---
         st.info(
-        "Leave requests must be submitted in writing with at least fourteen (14) days’ notice. \nLeave is taken in full weekly blocks (minimum of one week), with a maximum of eight (8) weeks permitted per calendar year. \nThe first four (4) weeks of leave each calendar year are free of charge. Any approved leave beyond four (4) weeks, up to the annual maximum of eight (8) weeks, will incur a $10.00 per week processing fee. \nStudents are not permitted to attend classes during an approved leave period. \nAdditional leave may be considered in cases of serious illness or injury where a valid medical certificate is provided."
+        "Leave requests must be submitted in writing with at least fourteen (14) days’ notice.  \nLeave is taken in full weekly blocks (minimum of one week), with a maximum of eight (8) weeks permitted per calendar year. \nThe first four (4) weeks of leave each calendar year are free of charge. Any approved leave beyond four (4) weeks, up to the annual maximum of eight (8) weeks, will incur a $10.00 per week processing fee. \nStudents are not permitted to attend classes during an approved leave period. \nAdditional leave may be considered in cases of serious illness or injury where a valid medical certificate is provided."
     )
     
         import datetime as _dt
