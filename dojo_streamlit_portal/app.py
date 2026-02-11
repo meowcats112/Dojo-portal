@@ -340,7 +340,7 @@ if st.session_state.member is not None:
 
         # --- Reminder about dojo policy ---
         st.info(
-        "Members may suspend their membership for 8 weeks per calendar year.  \nThe first 4 weeks will be free of charge and the next 4 weeks will be at a discounted rate of \$10/week.   \nSuspensions must be submitted via the portal with a minimum of 14 days notice.  \nFailure to do so may incur a \$10 short-notice fee or result in request being rejected.  \nExcept in case of injury or serious illness with valid medical certificate."
+        "Leave requests must be submitted in writing with at least fourteen (14) days’ notice. \nLeave is taken in full weekly blocks (minimum of one week), with a maximum of eight (8) weeks permitted per calendar year. \nThe first four (4) weeks of leave each calendar year are free of charge. Any approved leave beyond four (4) weeks, up to the annual maximum of eight (8) weeks, will incur a $10.00 per week processing fee. \nStudents are not permitted to attend classes during an approved leave period. \nAdditional leave may be considered in cases of serious illness or injury where a valid medical certificate is provided.
     )
     
         import datetime as _dt
@@ -637,8 +637,8 @@ if st.session_state.member is not None:
         st.subheader("Dojo info")
         st.markdown("""
 - **Timetable:** See our latest class times on the noticeboard or website.
-- **Leave policy:** Members have an annual allowance; please submit requests early where possible.
-- **Contact:** admin@yourdojo.com · 0400 000 000
+- **Leave policy:** For full details of the Membership Suspension Policy, please refer to the Membership Terms & Conditions.
+- **Contact:** skwaverley@gmail.com · 0483 956 262
         """)
 
 # ---- logged-out view ----
