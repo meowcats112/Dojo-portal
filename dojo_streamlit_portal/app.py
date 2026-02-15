@@ -184,7 +184,7 @@ with col2:
 if st.session_state.member is None:
     with st.form("login"):
         email = st.text_input("Your email", placeholder="you@example.com")
-        pin = st.text_input("PIN", type="password", placeholder="4–8 digits (ask the dojo if unsure)")
+        pin = st.text_input("PIN", type="password", placeholder="4–8 digits")
         submitted = st.form_submit_button("View my balance")
 
     if submitted:
@@ -215,7 +215,7 @@ if st.session_state.member is None:
                     st.success("Found your record.")
                     st.rerun()
                 else:
-                    st.error("No match found. Check your email/PIN or contact the dojo.")
+                    st.error("Incorrect email address or PIN.")
                     
         except Exception as e:
             st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
