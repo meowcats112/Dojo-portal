@@ -6,7 +6,7 @@ import hashlib
 from datetime import datetime
 import pytz
 
-("Secrets keys:", list(st.secrets.keys()))
+st.write("Has key:", "RESEND_API_KEY" in st.secrets)
 
 st.set_page_config(page_title="Dojo Member Portal", page_icon="🥋")
 
