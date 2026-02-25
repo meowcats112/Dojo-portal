@@ -3,13 +3,12 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import hashlib
-from datetime import datetime
 import pytz
 import random
 import resend
 from datetime import datetime, timedelta
 
-st.write("Has key:", "RESEND_API_KEY" in st.secrets)
+st.write("All secret keys:", list(st.secrets.keys()))
 
 st.set_page_config(page_title="Dojo Member Portal", page_icon="🥋")
 
