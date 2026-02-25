@@ -5,6 +5,9 @@ from google.oauth2.service_account import Credentials
 import hashlib
 from datetime import datetime
 import pytz
+import random
+import resend
+from datetime import datetime, timedelta
 
 st.write("Has key:", "RESEND_API_KEY" in st.secrets)
 
@@ -184,10 +187,6 @@ def append_contact_update(member: dict, update_type: str, update_name: str, *,
     # Emit values in the exact order of your sheet’s headers
     values = [row_map.get(h, "") for h in headers]
     ws.append_row(values)
-
-import random
-import resend
-from datetime import datetime, timedelta
 
 # configure resend
 resend.api_key = st.secrets["RESEND_API_KEY"]
