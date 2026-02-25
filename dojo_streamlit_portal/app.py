@@ -11,6 +11,9 @@ st.set_page_config(page_title="Dojo Member Portal", page_icon="🥋")
 if "member" not in st.session_state:
     st.session_state.member = None
 
+if "show_reset" not in st.session_state:
+    st.session_state.show_reset = False
+
 # --- Styling ---
 st.markdown("""
     <style>
@@ -187,6 +190,9 @@ if st.session_state.member is None:
         pin = st.text_input("PIN", type="password", placeholder="4–8 digits")
         submitted = st.form_submit_button("View my balance")
 
+    if st.button("Forgot PIN?", key="forgot_pin_btn"):
+    st.session_state.show_reset = True
+
     if submitted:
         try:
             df = load_members_df()
@@ -219,6 +225,37 @@ if st.session_state.member is None:
                     
         except Exception as e:
             st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
+
+        # --- Reset PIN form ---
+    if st.session_state.show_reset:
+        st.markdown("### 🔐 Reset PIN")
+
+        reset_email = st.text_input(
+            "Enter your account email",
+            key="reset_email"
+        )
+
+        reset_name = st.text_input(
+            "Student name",
+            key="reset_name"
+        )
+
+        if st.button("Submit reset request", key="reset_submit"):
+            if not reset_email or not reset_name:
+                st.error("Please complete all fields.")
+            else:
+                try:
+                    append_request(
+                        {"Email": reset_email, "MemberName": reset_name},
+                        "PIN Reset Request",
+                        "Member requested PIN reset"
+                    )
+                    st.success(
+                        "Your reset request has been sent. The dojo will contact you shortly."
+                    )
+                    st.session_state.show_reset = False
+                except Exception as e:
+                    st.error(f"Could not submit request: {e}")
 
 # ---- logged-in view ----
 if st.session_state.member is not None:
