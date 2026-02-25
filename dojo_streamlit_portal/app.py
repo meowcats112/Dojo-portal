@@ -288,75 +288,75 @@ if st.session_state.member is None:
         except Exception as e:
             st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
 
-        # --- Reset PIN form ---
-if st.session_state.show_reset:
-    st.markdown("### 🔐 Reset PIN")
-
-    # STEP A — request code
-    if not st.session_state.reset_verified:
-
-        reset_email = st.text_input(
-            "Account email",
-            placeholder="you@example.com",
-            key="reset_email"
-        )
-
-        send_code_btn = st.button("Send verification code", key="send_code")
-
-        if send_code_btn:
-            if not reset_email:
-                st.error("Please enter your account email.")
-            else:
-                try:
-                    code = generate_code(6)
-
-                    st.session_state.reset_code = code
-                    st.session_state.reset_email_pending = reset_email.strip().lower()
-                    st.session_state.reset_code_expiry = datetime.now() + timedelta(minutes=10)
-
-                    send_reset_code(reset_email, code)
-
-                    st.success("Verification code sent. Please check your email.")
-                except Exception as e:
-                    st.error(f"Could not send email: {e}")
-
-        # STEP B — verify code
-        if st.session_state.reset_code:
-            entered_code = st.text_input(
-                "Enter verification code",
-                max_chars=6,
-                key="code_entry"
+            # --- Reset PIN form ---
+    if st.session_state.show_reset:
+        st.markdown("### 🔐 Reset PIN")
+    
+        # STEP A — request code
+        if not st.session_state.reset_verified:
+    
+            reset_email = st.text_input(
+                "Account email",
+                placeholder="you@example.com",
+                key="reset_email"
             )
-
-            verify_btn = st.button("Verify code", key="verify_code")
-
-            if verify_btn:
-                if datetime.now() > st.session_state.reset_code_expiry:
-                    st.error("Code expired. Please request a new one.")
-                elif entered_code == st.session_state.reset_code:
-                    st.session_state.reset_verified = True
-                    st.success("Email verified.")
-                    st.rerun()
+    
+            send_code_btn = st.button("Send verification code", key="send_code")
+    
+            if send_code_btn:
+                if not reset_email:
+                    st.error("Please enter your account email.")
                 else:
-                    st.error("Incorrect code.")
-
-    # STEP C — after verification → generate new PIN
-    else:
-        if st.button("Generate new PIN", type="primary", key="gen_pin"):
-            try:
-                new_pin = generate_pin(6)
-                update_pin_for_email(st.session_state.reset_email_pending, new_pin)
-
-                st.success("Your PIN has been reset.")
-                st.info(f"Your new PIN is: **{new_pin}**")
-
-                # reset flow
-                st.session_state.show_reset = False
-                st.session_state.reset_verified = False
-                st.session_state.reset_code = None
-
-            except Exception as e:
-                st.error(f"Could not reset PIN: {e}")
+                    try:
+                        code = generate_code(6)
+    
+                        st.session_state.reset_code = code
+                        st.session_state.reset_email_pending = reset_email.strip().lower()
+                        st.session_state.reset_code_expiry = datetime.now() + timedelta(minutes=10)
+    
+                        send_reset_code(reset_email, code)
+    
+                        st.success("Verification code sent. Please check your email.")
+                    except Exception as e:
+                        st.error(f"Could not send email: {e}")
+    
+            # STEP B — verify code
+            if st.session_state.reset_code:
+                entered_code = st.text_input(
+                    "Enter verification code",
+                    max_chars=6,
+                    key="code_entry"
+                )
+    
+                verify_btn = st.button("Verify code", key="verify_code")
+    
+                if verify_btn:
+                    if datetime.now() > st.session_state.reset_code_expiry:
+                        st.error("Code expired. Please request a new one.")
+                    elif entered_code == st.session_state.reset_code:
+                        st.session_state.reset_verified = True
+                        st.success("Email verified.")
+                        st.rerun()
+                    else:
+                        st.error("Incorrect code.")
+    
+        # STEP C — after verification → generate new PIN
+        else:
+            if st.button("Generate new PIN", type="primary", key="gen_pin"):
+                try:
+                    new_pin = generate_pin(6)
+                    update_pin_for_email(st.session_state.reset_email_pending, new_pin)
+    
+                    st.success("Your PIN has been reset.")
+                    st.info(f"Your new PIN is: **{new_pin}**")
+    
+                    # reset flow
+                    st.session_state.show_reset = False
+                    st.session_state.reset_verified = False
+                    st.session_state.reset_code = None
+    
+                except Exception as e:
+                    st.error(f"Could not reset PIN: {e}")
 
 else:
     member = st.session_state.member
