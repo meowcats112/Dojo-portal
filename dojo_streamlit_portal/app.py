@@ -190,7 +190,7 @@ import resend
 from datetime import datetime, timedelta
 
 # configure resend
-resend.api_key = st.secrets["RESEND_API_KEY"]
+resend.api_key = st.secrets["Resend"]
 
 def generate_pin(length: int = 6) -> str:
     # 6-digit numeric PIN
