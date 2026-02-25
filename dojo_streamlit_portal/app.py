@@ -320,8 +320,8 @@ if st.session_state.member is None:
     
                         send_reset_code(reset_email, code)
     
-                        st.success("Verification code sent. Please check your email. "
-                                   "If you don't receive your code after 1 minute, please check your SPAM or Junk folder.")
+                        st.success("Verification code sent.")
+                        st.caption("Please check your email. If you don't receive your code after 1 minute, please check your Spam or Junk folder.")
                     except Exception as e:
                         st.error(f"Could not send email: {e}")
     
