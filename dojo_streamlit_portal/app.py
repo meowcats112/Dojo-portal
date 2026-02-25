@@ -357,6 +357,9 @@ if st.session_state.show_reset:
 
             except Exception as e:
                 st.error(f"Could not reset PIN: {e}")
+
+else:
+    member = st.session_state.member
                 
     # Pull fields
     def as_float(x, default=0):
