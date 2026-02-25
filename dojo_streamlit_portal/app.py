@@ -189,7 +189,7 @@ def append_contact_update(member: dict, update_type: str, update_name: str, *,
     ws.append_row(values)
 
 # configure resend
-resend.api_key = st.secrets["RESEND_API_KEY"]
+resend.api_key = st.secrets.get["RESEND_API_KEY"]
 
 def generate_pin(length: int = 6) -> str:
     # 6-digit numeric PIN
