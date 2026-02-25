@@ -8,7 +8,6 @@ import random
 import resend
 from datetime import datetime, timedelta
 
-st.write("All secret keys:", list(st.secrets.keys()))
 
 st.set_page_config(page_title="Dojo Member Portal", page_icon="🥋")
 
