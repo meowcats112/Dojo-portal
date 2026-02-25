@@ -358,33 +358,33 @@ if st.session_state.show_reset:
             except Exception as e:
                 st.error(f"Could not reset PIN: {e}")
 
-else:
-    member = st.session_state.member
-                
-    # Pull fields
-    def as_float(x, default=0):
-        try:
-            return float(x)
-        except Exception:
-            return default
-
-    def pct(a, b):
-        try:
-            a = float(a); b = float(b)
-            return 0 if b <= 0 else max(0, min(100, (a / b) * 100))
-        except Exception:
-            return 0
-
-    name    = member.get("MemberName","")
-    year    = member.get("LeaveYear","")
-    allow   = as_float(member.get("AnnualAllowance", 0))
-    taken   = as_float(member.get("LeaveTaken", 0))
-    bal     = as_float(member.get("LeaveBalance", 0))
-    updated = member.get("LastUpdated","")
-    email   = member.get("Email","")
-
-    st.markdown(f"**{name}**  ·  {email}")
-    st.write("")  # spacer
+    else:
+        member = st.session_state.member
+                    
+        # Pull fields
+        def as_float(x, default=0):
+            try:
+                return float(x)
+            except Exception:
+                return default
+    
+        def pct(a, b):
+            try:
+                a = float(a); b = float(b)
+                return 0 if b <= 0 else max(0, min(100, (a / b) * 100))
+            except Exception:
+                return 0
+    
+        name    = member.get("MemberName","")
+        year    = member.get("LeaveYear","")
+        allow   = as_float(member.get("AnnualAllowance", 0))
+        taken   = as_float(member.get("LeaveTaken", 0))
+        bal     = as_float(member.get("LeaveBalance", 0))
+        updated = member.get("LastUpdated","")
+        email   = member.get("Email","")
+    
+        st.markdown(f"**{name}**  ·  {email}")
+        st.write("")  # spacer
 
     # --- Navigation (radio buttons that look like tabs) ---
     nav = st.radio(
