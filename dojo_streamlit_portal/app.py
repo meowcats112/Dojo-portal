@@ -191,7 +191,7 @@ if st.session_state.member is None:
         submitted = st.form_submit_button("View my balance")
 
     if st.button("Forgot PIN?", key="forgot_pin_btn"):
-    st.session_state.show_reset = True
+        st.session_state.show_reset = True
 
     if submitted:
         try:
