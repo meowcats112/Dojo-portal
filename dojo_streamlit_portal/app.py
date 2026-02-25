@@ -14,6 +14,18 @@ if "member" not in st.session_state:
 if "show_reset" not in st.session_state:
     st.session_state.show_reset = False
 
+if "reset_code" not in st.session_state:
+    st.session_state.reset_code = None
+
+if "reset_email_pending" not in st.session_state:
+    st.session_state.reset_email_pending = None
+
+if "reset_code_expiry" not in st.session_state:
+    st.session_state.reset_code_expiry = None
+
+if "reset_verified" not in st.session_state:
+    st.session_state.reset_verified = False
+
 # --- Styling ---
 st.markdown("""
     <style>
@@ -171,7 +183,58 @@ def append_contact_update(member: dict, update_type: str, update_name: str, *,
     values = [row_map.get(h, "") for h in headers]
     ws.append_row(values)
 
+import random
+import resend
+from datetime import datetime, timedelta
 
+# configure resend
+resend.api_key = st.secrets["RESEND_API_KEY"]
+
+def generate_pin(length: int = 6) -> str:
+    # 6-digit numeric PIN
+    return "".join(str(random.randint(0, 9)) for _ in range(length))
+
+def send_reset_code(email: str, code: str):
+    resend.emails.send({
+        "from": st.secrets["FROM_EMAIL"],
+        "to": [email],
+        "subject": "Your Samurai Karate PIN reset code",
+        "html": f"""
+        <p>Hello,</p>
+        <p>Your PIN reset code is:</p>
+        <h2>{code}</h2>
+        <p>This code expires in 10 minutes.</p>
+        <p>If you didn’t request this, please ignore this email.</p>
+        """
+    })
+
+def update_pin_for_email(email: str, new_pin: str):
+    """Updates PIN in the MEMBERS sheet for ALL rows matching the email (multi-student accounts)."""
+    gc = get_gsheets_client()
+    ws = gc.open_by_key(st.secrets["sheets"]["members_sheet_key"]).sheet1  # <-- make sure this exists in Secrets
+    rows = ws.get_all_values()
+    if not rows:
+        raise ValueError("Members sheet is empty.")
+
+    headers = rows[0]
+    try:
+        email_col = headers.index("Email") + 1
+        pin_col = headers.index("PIN") + 1
+    except ValueError:
+        raise ValueError("Members sheet must contain 'Email' and 'PIN' columns.")
+
+    target = email.strip().lower()
+    updated_any = False
+
+    # Data starts from row 2 (1-indexed in Sheets)
+    for r_idx in range(2, len(rows) + 1):
+        row_email = (rows[r_idx - 1][email_col - 1] if len(rows[r_idx - 1]) >= email_col else "").strip().lower()
+        if row_email == target:
+            ws.update_cell(r_idx, pin_col, str(new_pin))
+            updated_any = True
+
+    if not updated_any:
+        raise ValueError("No matching email found in Members sheet.")
 
 # --- UI ---
 # Heading + logout row
@@ -227,62 +290,75 @@ if st.session_state.member is None:
             st.error(f"Error reading data. Check your Secrets and Google Sheet sharing: {e}")
 
         # --- Reset PIN form ---
-    if st.session_state.show_reset:
-        st.markdown("### 🔐 Reset PIN")
+if st.session_state.show_reset:
+    st.markdown("### 🔐 Reset PIN")
+
+    # STEP A — request code
+    if not st.session_state.reset_verified:
 
         reset_email = st.text_input(
-        "Account email",
-        placeholder="you@example.com",
-        key="reset_email"
+            "Account email",
+            placeholder="you@example.com",
+            key="reset_email"
         )
-    
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            submit_reset = st.button("Submit reset request", type="primary", key="reset_submit")
-        with c2:
-            cancel_reset = st.button("Cancel", key="reset_cancel")
-    
-        if cancel_reset:
-            st.session_state.show_reset = False
-            st.rerun()
-    
-        if submit_reset:
-            if not reset_email or not reset_email.strip():
+
+        send_code_btn = st.button("Send verification code", key="send_code")
+
+        if send_code_btn:
+            if not reset_email:
                 st.error("Please enter your account email.")
             else:
                 try:
-                    append_request(
-                        {"Email": reset_email.strip(), "MemberID": "", "MemberName": ""},
-                        "PIN Reset Request",
-                        "Member requested PIN reset"
-                    )
-                    st.success("Thanks — your request has been sent. We’ll contact you shortly.")
-                    st.session_state.show_reset = False
-                    st.rerun()
+                    code = generate_code(6)
+
+                    st.session_state.reset_code = code
+                    st.session_state.reset_email_pending = reset_email.strip().lower()
+                    st.session_state.reset_code_expiry = datetime.now() + timedelta(minutes=10)
+
+                    send_reset_code(reset_email, code)
+
+                    st.success("Verification code sent. Please check your email.")
                 except Exception as e:
-                    st.error(f"Could not submit request: {e}")
+                    st.error(f"Could not send email: {e}")
 
-# ---- logged-in view ----
-if st.session_state.member is not None:
-    member = st.session_state.member
+        # STEP B — verify code
+        if st.session_state.reset_code:
+            entered_code = st.text_input(
+                "Enter verification code",
+                max_chars=6,
+                key="code_entry"
+            )
 
-     # Check if this email/PIN has multiple students
-    try:
-        df = load_members_df()
-        matches = df[
-            (df["Email"].str.strip().str.lower() == member["Email"].strip().lower())
-            & (df["PIN"].astype(str) == str(member["PIN"]))
-        ]
-        if len(matches) > 1:
-            student_names = matches["MemberName"].tolist()
-            chosen = st.selectbox("Select a student", student_names, index=student_names.index(member["MemberName"]), key="student_picker")
-            # Update the active student if changed
-            new_row = matches[matches["MemberName"] == chosen].iloc[0].to_dict()
-            st.session_state.member = new_row
-            member = new_row
-    except Exception as e:
-        st.error(f"Could not load student list: {e}")
+            verify_btn = st.button("Verify code", key="verify_code")
 
+            if verify_btn:
+                if datetime.now() > st.session_state.reset_code_expiry:
+                    st.error("Code expired. Please request a new one.")
+                elif entered_code == st.session_state.reset_code:
+                    st.session_state.reset_verified = True
+                    st.success("Email verified.")
+                    st.rerun()
+                else:
+                    st.error("Incorrect code.")
+
+    # STEP C — after verification → generate new PIN
+    else:
+        if st.button("Generate new PIN", type="primary", key="gen_pin"):
+            try:
+                new_pin = generate_pin(6)
+                update_pin_for_email(st.session_state.reset_email_pending, new_pin)
+
+                st.success("Your PIN has been reset.")
+                st.info(f"Your new PIN is: **{new_pin}**")
+
+                # reset flow
+                st.session_state.show_reset = False
+                st.session_state.reset_verified = False
+                st.session_state.reset_code = None
+
+            except Exception as e:
+                st.error(f"Could not reset PIN: {e}")
+                
     # Pull fields
     def as_float(x, default=0):
         try:
