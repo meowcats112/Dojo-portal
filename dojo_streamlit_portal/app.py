@@ -194,7 +194,7 @@ def generate_code(length: int = 6) -> str:
     return "".join(str(random.randint(0, 9)) for _ in range(length))
 
 def send_reset_code(email: str, code: str):
-    resend.emails.send({
+    resend.Emails.send({
         "from": st.secrets["FROM_EMAIL"],
         "to": [email],
         "subject": "Your Samurai Karate PIN reset code",
