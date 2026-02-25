@@ -29,6 +29,9 @@ if "reset_code_expiry" not in st.session_state:
 if "reset_verified" not in st.session_state:
     st.session_state.reset_verified = False
 
+if "reset_cooldown_until" not in st.session_state:
+    st.session_state.reset_cooldown_until = None
+
 # --- Styling ---
 st.markdown("""
     <style>
@@ -305,25 +308,44 @@ if st.session_state.member is None:
                 key="reset_email"
             )
     
-            send_code_btn = st.button("Send verification code", key="send_code")
-    
-            if send_code_btn:
-                if not reset_email:
-                    st.error("Please enter your account email.")
-                else:
-                    try:
-                        code = generate_code(6)
-    
-                        st.session_state.reset_code = code
-                        st.session_state.reset_email_pending = reset_email.strip().lower()
-                        st.session_state.reset_code_expiry = datetime.now() + timedelta(minutes=10)
-    
-                        send_reset_code(reset_email, code)
-    
-                        st.success("Verification code sent.")
-                        st.caption("Please check your email. If you don't receive your code after 1 minute, please check your Spam or Junk folder.")
-                    except Exception as e:
-                        st.error(f"Could not send email: {e}")
+            now = datetime.now()
+
+            cooldown_active = (
+                st.session_state.reset_cooldown_until is not None
+                and now < st.session_state.reset_cooldown_until
+            )
+            
+            if cooldown_active:
+                remaining = int((st.session_state.reset_cooldown_until - now).total_seconds())
+                st.button(
+                    f"Resend available in {remaining}s",
+                    disabled=True,
+                    key="send_code_disabled"
+                )
+            else:
+                if st.button("Send verification code", key="send_code"):
+                    if not reset_email:
+                        st.error("Please enter your account email.")
+                    else:
+                        try:
+                            code = generate_code(6)
+            
+                            st.session_state.reset_code = code
+                            st.session_state.reset_email_pending = reset_email.strip().lower()
+                            st.session_state.reset_code_expiry = datetime.now() + timedelta(minutes=10)
+            
+                            send_reset_code(reset_email, code)
+            
+                            # Start 60-second cooldown
+                            st.session_state.reset_cooldown_until = datetime.now() + timedelta(seconds=60)
+            
+                            st.success("Verification code sent. Please check your email.")
+                            st.caption("If you don’t see it within a minute, check your spam or junk folder.")
+            
+                            st.rerun()
+            
+                        except Exception as e:
+                            st.error(f"Could not send email: {e}")
     
             # STEP B — verify code
             if st.session_state.reset_code:
