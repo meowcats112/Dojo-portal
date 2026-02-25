@@ -231,29 +231,34 @@ if st.session_state.member is None:
         st.markdown("### 🔐 Reset PIN")
 
         reset_email = st.text_input(
-            "Enter your account email",
-            key="reset_email"
+        "Account email",
+        placeholder="you@example.com",
+        key="reset_email"
         )
-
-        reset_name = st.text_input(
-            "Student name",
-            key="reset_name"
-        )
-
-        if st.button("Submit reset request", key="reset_submit"):
-            if not reset_email or not reset_name:
-                st.error("Please complete all fields.")
+    
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            submit_reset = st.button("Submit reset request", type="primary", key="reset_submit")
+        with c2:
+            cancel_reset = st.button("Cancel", key="reset_cancel")
+    
+        if cancel_reset:
+            st.session_state.show_reset = False
+            st.rerun()
+    
+        if submit_reset:
+            if not reset_email or not reset_email.strip():
+                st.error("Please enter your account email.")
             else:
                 try:
                     append_request(
-                        {"Email": reset_email, "MemberName": reset_name},
+                        {"Email": reset_email.strip(), "MemberID": "", "MemberName": ""},
                         "PIN Reset Request",
                         "Member requested PIN reset"
                     )
-                    st.success(
-                        "Your reset request has been sent. The dojo will contact you shortly."
-                    )
+                    st.success("Thanks — your request has been sent. We’ll contact you shortly.")
                     st.session_state.show_reset = False
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Could not submit request: {e}")
 
