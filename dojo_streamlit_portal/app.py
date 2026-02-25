@@ -6,6 +6,8 @@ import hashlib
 from datetime import datetime
 import pytz
 
+("Secrets keys:", list(st.secrets.keys()))
+
 st.set_page_config(page_title="Dojo Member Portal", page_icon="🥋")
 
 if "member" not in st.session_state:
