@@ -761,6 +761,6 @@ else:
 - **Contact:** skwaverley@gmail.com · 0483 956 262
         """)
 
-# ---- logged-out view ----
-else:
-    st.info("Enter your email and PIN to view your balance.")
+    # ---- logged-out view ----
+    else:
+        st.info("Enter your email and PIN to view your balance.")
