@@ -201,7 +201,7 @@ def send_reset_code(email: str, code: str):
     resend.Emails.send({
         "from": st.secrets["FROM_EMAIL"],
         "to": [email],
-        "subject": "Your Samurai Karate PIN reset code",
+        "subject": "Your Samurai Karate Waverley PIN reset code",
         "html": f"""
         <p>Hello,</p>
         <p>Your PIN reset code is:</p>
@@ -320,7 +320,8 @@ if st.session_state.member is None:
     
                         send_reset_code(reset_email, code)
     
-                        st.success("Verification code sent. Please check your email.")
+                        st.success("Verification code sent. Please check your email. "
+                                   "If you don't receive your code after 1 minute, please check your SPAM or Junk folder.")
                     except Exception as e:
                         st.error(f"Could not send email: {e}")
     
