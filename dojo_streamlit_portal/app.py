@@ -189,7 +189,7 @@ def append_contact_update(member: dict, update_type: str, update_name: str, *,
 # configure resend
 resend.api_key = st.secrets.get("RESEND_API_KEY")
 
-def generate_pin(length: int = 6) -> str:
+def generate_code(length: int = 6) -> str:
     # 6-digit numeric PIN
     return "".join(str(random.randint(0, 9)) for _ in range(length))
 
