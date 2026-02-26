@@ -346,7 +346,12 @@ if st.session_state.member is None:
             
                         except Exception as e:
                             st.error(f"Could not send email: {e}")
-    
+
+            if cooldown_active:
+                import time
+                time.sleep(1)
+                st.rerun()
+
             # STEP B — verify code
             if st.session_state.reset_code:
                 entered_code = st.text_input(
