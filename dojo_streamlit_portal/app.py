@@ -305,7 +305,7 @@ if st.session_state.member is None:
         # STEP A — request code
         if not st.session_state.reset_verified:
     
-                reset_email = st.text_input(
+            reset_email = st.text_input(
                 "Account email",
                 placeholder="you@example.com",
                 key="reset_email"
