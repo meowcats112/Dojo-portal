@@ -32,6 +32,9 @@ if "reset_verified" not in st.session_state:
 if "reset_cooldown_until" not in st.session_state:
     st.session_state.reset_cooldown_until = None
 
+if "code_sent" not in st.session_state:
+    st.session_state.code_sent = False
+
 # --- Styling ---
 st.markdown("""
     <style>
@@ -307,7 +310,9 @@ if st.session_state.member is None:
                 placeholder="you@example.com",
                 key="reset_email"
             )
-    
+            if st.session_state.code_sent:
+                st.success("Verification code sent. Please check your email.")
+                st.caption("If you don’t see it within a minute, check your spam or junk folder.")
             now = datetime.now()
 
             cooldown_active = (
@@ -337,10 +342,8 @@ if st.session_state.member is None:
                             send_reset_code(reset_email, code)
             
                             # Start 60-second cooldown
+                            st.session_state.code_sent = True
                             st.session_state.reset_cooldown_until = datetime.now() + timedelta(seconds=60)
-            
-                            st.success("Verification code sent. Please check your email.")
-                            st.caption("If you don’t see it within a minute, check your spam or junk folder.")
             
                         except Exception as e:
                             st.error(f"Could not send email: {e}")
