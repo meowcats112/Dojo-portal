@@ -304,25 +304,23 @@ if st.session_state.member is None:
     
         # STEP A — request code
         if not st.session_state.reset_verified:
-    
+
             reset_email = st.text_input(
                 "Account email",
                 placeholder="you@example.com",
                 key="reset_email"
             )
-            
+        
             now = datetime.now()
-            
-            # Determine cooldown state
             cooldown_until = st.session_state.get("reset_cooldown_until")
             cooldown_active = cooldown_until and now < cooldown_until
-            
-            # --- Show success message if cooldown active ---
+        
+            # --- Success message ---
             if cooldown_active:
-                st.success("Verification code sent.")
-                st.caption("Please check your email. If you don’t see it within a minute, check your spam or junk folder.")
-            
-            # --- Button behaviour ---
+                st.success("Verification code sent. Please check your email.")
+                st.caption("If you don’t see it within a minute, check your spam or junk folder.")
+        
+            # --- Send / Resend button ---
             if cooldown_active:
                 remaining = int((cooldown_until - now).total_seconds())
                 st.button(f"Resend available in {remaining}s", disabled=True)
@@ -333,46 +331,44 @@ if st.session_state.member is None:
                     else:
                         try:
                             code = generate_code(6)
-            
+        
                             st.session_state.reset_code = code
                             st.session_state.reset_email_pending = reset_email.strip().lower()
                             st.session_state.reset_code_expiry = datetime.now() + timedelta(minutes=10)
-            
+        
                             send_reset_code(reset_email, code)
-            
-                            # Start cooldown
+        
                             st.session_state.reset_cooldown_until = datetime.now() + timedelta(seconds=60)
-            
+        
                             st.rerun()
-            
+        
                         except Exception as e:
                             st.error(f"Could not send email: {e}")
             
-            # --- Force countdown refresh ---
+        # STEP B — verify code
+             if st.session_state.get("reset_code"):
+
+                    entered_code = st.text_input(
+                        "Enter verification code",
+                        max_chars=6,
+                        key="code_entry"
+                    )
+            
+                    if st.button("Verify code"):
+                        if datetime.now() > st.session_state.reset_code_expiry:
+                            st.error("Code expired. Please request a new one.")
+                        elif entered_code == st.session_state.reset_code:
+                            st.session_state.reset_verified = True
+                            st.success("Email verified.")
+                            st.rerun()
+                        else:
+                            st.error("Incorrect code.")
+
+            # --- Countdown refresh LAST ---
             if cooldown_active:
                 import time
                 time.sleep(1)
                 st.rerun()
-            
-        # STEP B — verify code
-            # --- Code verification input ---
-            if st.session_state.get("reset_code"):
-            
-                entered_code = st.text_input(
-                    "Enter verification code",
-                    max_chars=6,
-                    key="code_entry"
-                )
-            
-                if st.button("Verify code", key="verify_code"):
-                    if datetime.now() > st.session_state.reset_code_expiry:
-                        st.error("Code expired. Please request a new one.")
-                    elif entered_code == st.session_state.reset_code:
-                        st.session_state.reset_verified = True
-                        st.success("Email verified.")
-                        st.rerun()
-                    else:
-                        st.error("Incorrect code.")
            
     # STEP C — after verification → generate new PIN
     else:
