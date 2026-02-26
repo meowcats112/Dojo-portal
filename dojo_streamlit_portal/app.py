@@ -353,18 +353,18 @@ if st.session_state.member is None:
                 import time
                 time.sleep(1)
                 st.rerun()
-
-            # STEP B — verify code
-            if st.session_state.reset_code:
+            
+        # STEP B — verify code
+            # --- Code verification input ---
+            if st.session_state.get("reset_code"):
+            
                 entered_code = st.text_input(
                     "Enter verification code",
                     max_chars=6,
                     key="code_entry"
                 )
-    
-                verify_btn = st.button("Verify code", key="verify_code")
-    
-                if verify_btn:
+            
+                if st.button("Verify code", key="verify_code"):
                     if datetime.now() > st.session_state.reset_code_expiry:
                         st.error("Code expired. Please request a new one.")
                     elif entered_code == st.session_state.reset_code:
@@ -373,7 +373,7 @@ if st.session_state.member is None:
                         st.rerun()
                     else:
                         st.error("Incorrect code.")
-
+           
     # STEP C — after verification → generate new PIN
     else:
         if st.button("Generate new PIN", type="primary", key="gen_pin"):
