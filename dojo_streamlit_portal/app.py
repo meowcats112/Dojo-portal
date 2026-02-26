@@ -305,30 +305,29 @@ if st.session_state.member is None:
         # STEP A — request code
         if not st.session_state.reset_verified:
     
-            reset_email = st.text_input(
+                reset_email = st.text_input(
                 "Account email",
                 placeholder="you@example.com",
                 key="reset_email"
             )
-            if st.session_state.code_sent:
-                st.success("Verification code sent. Please check your email.")
-                st.caption("If you don’t see it within a minute, check your spam or junk folder.")
-            now = datetime.now()
-
-            cooldown_active = (
-                st.session_state.reset_cooldown_until is not None
-                and now < st.session_state.reset_cooldown_until
-            )
             
+            now = datetime.now()
+            
+            # Determine cooldown state
+            cooldown_until = st.session_state.get("reset_cooldown_until")
+            cooldown_active = cooldown_until and now < cooldown_until
+            
+            # --- Show success message if cooldown active ---
             if cooldown_active:
-                remaining = int((st.session_state.reset_cooldown_until - now).total_seconds())
-                st.button(
-                    f"Resend available in {remaining}s",
-                    disabled=True,
-                    key="send_code_disabled"
-                )
+                st.success("Verification code sent.")
+                st.caption("Please check your email. If you don’t see it within a minute, check your spam or junk folder.")
+            
+            # --- Button behaviour ---
+            if cooldown_active:
+                remaining = int((cooldown_until - now).total_seconds())
+                st.button(f"Resend available in {remaining}s", disabled=True)
             else:
-                if st.button("Send verification code", key="send_code"):
+                if st.button("Send verification code"):
                     if not reset_email:
                         st.error("Please enter your account email.")
                     else:
@@ -341,13 +340,15 @@ if st.session_state.member is None:
             
                             send_reset_code(reset_email, code)
             
-                            # Start 60-second cooldown
-                            st.session_state.code_sent = True
+                            # Start cooldown
                             st.session_state.reset_cooldown_until = datetime.now() + timedelta(seconds=60)
+            
+                            st.rerun()
             
                         except Exception as e:
                             st.error(f"Could not send email: {e}")
-
+            
+            # --- Force countdown refresh ---
             if cooldown_active:
                 import time
                 time.sleep(1)
