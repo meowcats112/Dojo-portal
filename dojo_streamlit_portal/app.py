@@ -342,8 +342,6 @@ if st.session_state.member is None:
                             st.success("Verification code sent. Please check your email.")
                             st.caption("If you don’t see it within a minute, check your spam or junk folder.")
             
-                            st.rerun()
-            
                         except Exception as e:
                             st.error(f"Could not send email: {e}")
 
