@@ -318,7 +318,7 @@ if st.session_state.member is None:
             # --- Success message ---
             if cooldown_active:
                 st.success("Verification code sent.")
-                st.info("If you don’t see it within a minute, check your spam or junk folder.")
+                st.info("Make sure you check your spam or junk folder.")
         
             # --- Send / Resend button ---
             if cooldown_active:
